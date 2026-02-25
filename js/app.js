@@ -3,11 +3,8 @@
  * Captures vehicle and license plate photos and sends to n8n webhooks
  */
 
-// Webhook URLs
-const WEBHOOKS = {
-    voiture: 'https://n8n.srv987649.hstgr.cloud/webhook/PhotoVoiture',
-    matricule: 'https://n8n.srv987649.hstgr.cloud/webhook/PhotoMatricule'
-};
+// Webhook URL - single endpoint for all data
+const WEBHOOK_URL = 'https://n8n.srv987649.hstgr.cloud/webhook/Lavage';
 
 // App State
 const state = {
@@ -188,7 +185,7 @@ function updateSubmitButton() {
 }
 
 /**
- * Submit photos to their respective webhooks
+ * Submit photos to the webhook
  */
 async function submitPhotos() {
     if (!state.photoVoiture || !state.photoMatricule) {
@@ -204,29 +201,20 @@ async function submitPhotos() {
     hideStatus();
 
     try {
-        // Send both photos in parallel
-        const [voitureResult, matriculeResult] = await Promise.all([
-            sendToWebhook(WEBHOOKS.voiture, {
-                image: state.photoVoiture,
-                timestamp: timestamp,
-                washType: washType
-            }),
-            sendToWebhook(WEBHOOKS.matricule, {
-                image: state.photoMatricule,
-                timestamp: timestamp,
-                washType: washType
-            })
-        ]);
+        // Send all data to single webhook
+        const result = await sendToWebhook(WEBHOOK_URL, {
+            image1: state.photoVoiture,
+            image2: state.photoMatricule,
+            washType: washType,
+            timestamp: timestamp
+        });
 
-        // Check results
-        if (voitureResult.success && matriculeResult.success) {
+        // Check result
+        if (result.success) {
             showStatus('Photos envoyées avec succès!', 'success');
             resetApp();
         } else {
-            const errors = [];
-            if (!voitureResult.success) errors.push('Photo Voiture');
-            if (!matriculeResult.success) errors.push('Photo Matricule');
-            showStatus(`Erreur d'envoi: ${errors.join(', ')}`, 'error');
+            showStatus('Erreur d\'envoi. Veuillez réessayer.', 'error');
         }
 
     } catch (error) {
