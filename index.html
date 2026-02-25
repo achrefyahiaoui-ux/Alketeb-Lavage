@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Alketeb Lavage</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <h1>Alketeb Lavage</h1>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Photo Voiture Button -->
+            <div class="photo-section">
+                <button id="btnPhotoVoiture" class="photo-btn">
+                    <span class="btn-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                            <circle cx="12" cy="13" r="4"></circle>
+                        </svg>
+                    </span>
+                    <span class="btn-text">Photo Voiture</span>
+                </button>
+                <div id="previewVoiture" class="preview-container hidden">
+                    <img id="imgVoiture" alt="Photo de la voiture">
+                    <button id="retakeVoiture" class="retake-btn" title="Reprendre">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path>
+                            <path d="M21 3v5h-5"></path>
+                            <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path>
+                            <path d="M8 16H3v5"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Photo Matricule Button -->
+            <div class="photo-section">
+                <button id="btnPhotoMatricule" class="photo-btn">
+                    <span class="btn-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                            <line x1="3" y1="9" x2="21" y2="9"></line>
+                            <line x1="9" y1="21" x2="9" y2="9"></line>
+                        </svg>
+                    </span>
+                    <span class="btn-text">Photo Matricule</span>
+                </button>
+                <div id="previewMatricule" class="preview-container hidden">
+                    <img id="imgMatricule" alt="Photo de la matricule">
+                    <button id="retakeMatricule" class="retake-btn" title="Reprendre">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path>
+                            <path d="M21 3v5h-5"></path>
+                            <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path>
+                            <path d="M8 16H3v5"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Dropdown for Wash Type -->
+            <div class="dropdown-section">
+                <select id="washType" class="wash-dropdown">
+                    <option value="">Selectionner le type de lavage</option>
+                    <option value="Lavage Exterieur Uniquement">Lavage Exterieur Uniquement</option>
+                    <option value="Lavage Complet">Lavage Complet</option>
+                </select>
+            </div>
+
+            <!-- Submit Button -->
+            <div class="submit-section">
+                <button id="btnValider" class="submit-btn" disabled>
+                    <span class="btn-text">Valider</span>
+                    <span class="btn-loader hidden">
+                        <svg class="spinner" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" fill="none" stroke-dasharray="32" stroke-linecap="round"/>
+                        </svg>
+                    </span>
+                </button>
+            </div>
+
+            <!-- Status Message -->
+            <div id="statusMessage" class="status-message hidden"></div>
+        </main>
+
+        <!-- Camera Modal -->
+        <div id="cameraModal" class="camera-modal hidden">
+            <div class="camera-container">
+                <video id="cameraVideo" autoplay playsinline></video>
+                <div class="camera-controls">
+                    <button id="btnCapture" class="capture-btn">
+                        <span class="capture-ring"></span>
+                    </button>
+                    <button id="btnCloseCamera" class="close-camera-btn">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
+                </div>
+                <div class="camera-hint" id="cameraHint"></div>
+            </div>
+        </div>
+
+        <!-- Hidden canvas for photo capture -->
+        <canvas id="photoCanvas" class="hidden"></canvas>
+    </div>
+
+    <script src="js/app.js"></script>
+</body>
+</html>

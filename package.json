@@ -1,0 +1,22 @@
+{
+  "name": "alketeb-lavage",
+  "version": "1.0.0",
+  "description": "Car wash photo capture app with n8n webhook integration",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx serve .",
+    "dev": "npx serve . -l 3000"
+  },
+  "keywords": [
+    "car-wash",
+    "lavage",
+    "n8n",
+    "webhook",
+    "camera"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "serve": "^14.2.0"
+  }
+}
