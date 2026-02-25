@@ -23,6 +23,7 @@ const elements = {
     btnPhotoVoiture: document.getElementById('btnPhotoVoiture'),
     btnPhotoMatricule: document.getElementById('btnPhotoMatricule'),
     btnValider: document.getElementById('btnValider'),
+    btnRestart: document.getElementById('btnRestart'),
     btnCapture: document.getElementById('btnCapture'),
     btnCloseCamera: document.getElementById('btnCloseCamera'),
     retakeVoiture: document.getElementById('retakeVoiture'),
@@ -61,6 +62,7 @@ function init() {
     elements.btnCapture.addEventListener('click', capturePhoto);
     elements.btnCloseCamera.addEventListener('click', closeCamera);
     elements.btnValider.addEventListener('click', submitPhotos);
+    elements.btnRestart.addEventListener('click', restartApp);
     elements.retakeVoiture.addEventListener('click', () => retakePhoto('voiture'));
     elements.retakeMatricule.addEventListener('click', () => retakePhoto('matricule'));
 
@@ -326,6 +328,33 @@ function resetApp() {
 
     // Update submit button
     updateSubmitButton();
+}
+
+/**
+ * Restart app - clear all data and start fresh
+ */
+function restartApp() {
+    // Clear photos
+    state.photoVoiture = null;
+    state.photoMatricule = null;
+
+    // Clear previews
+    elements.imgVoiture.src = '';
+    elements.imgMatricule.src = '';
+    elements.previewVoiture.classList.add('hidden');
+    elements.previewMatricule.classList.add('hidden');
+
+    // Reset dropdown
+    elements.washType.value = '';
+
+    // Hide any status messages
+    hideStatus();
+
+    // Update submit button
+    updateSubmitButton();
+
+    // Show confirmation
+    showStatus('Application redémarrée', 'success');
 }
 
 // Initialize app when DOM is ready

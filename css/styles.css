@@ -235,6 +235,39 @@ html, body {
     to { transform: rotate(360deg); }
 }
 
+/* Restart Button */
+.restart-section {
+    margin-top: 5px;
+}
+
+.restart-btn {
+    width: 100%;
+    padding: 16px 24px;
+    background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+    border: none;
+    border-radius: var(--border-radius);
+    color: var(--white);
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    box-shadow: var(--shadow-light);
+    transition: var(--transition);
+}
+
+.restart-btn:hover {
+    background: linear-gradient(135deg, #5a6268 0%, #3d4349 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(108, 117, 125, 0.4);
+}
+
+.restart-btn:active {
+    transform: translateY(0);
+}
+
 /* Status Message */
 .status-message {
     text-align: center;
