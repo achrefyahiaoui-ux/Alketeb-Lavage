@@ -62,8 +62,9 @@ function init() {
     elements.btnRestart.addEventListener('click', restartApp);
     elements.retakeVoiture.addEventListener('click', () => retakePhoto('voiture'));
     elements.retakeMatricule.addEventListener('click', () => retakePhoto('matricule'));
+    elements.washType.addEventListener('change', updateSubmitButton);
 
-    // Update submit button state when photos change
+    // Update submit button state when photos or wash type change
     updateSubmitButton();
 }
 
@@ -177,11 +178,12 @@ function retakePhoto(type) {
 }
 
 /**
- * Update submit button state based on captured photos
+ * Update submit button state based on captured photos and wash type
  */
 function updateSubmitButton() {
     const hasAllPhotos = state.photoVoiture && state.photoMatricule;
-    elements.btnValider.disabled = !hasAllPhotos;
+    const hasWashType = elements.washType.value !== '';
+    elements.btnValider.disabled = !(hasAllPhotos && hasWashType);
 }
 
 /**
@@ -194,6 +196,11 @@ async function submitPhotos() {
     }
 
     const washType = elements.washType.value;
+
+    if (!washType) {
+        showStatus('Veuillez sélectionner le type de lavage', 'error');
+        return;
+    }
     const timestamp = new Date().toISOString();
 
     // Disable button and show loading state
