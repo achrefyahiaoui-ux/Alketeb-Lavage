@@ -3,15 +3,17 @@
  * Captures vehicle and license plate photos and sends to n8n webhooks
  */
 
-// Webhook URL - single endpoint for all data
+// Webhook URLs
 const WEBHOOK_URL = 'https://n8n.srv987649.hstgr.cloud/webhook/Lavage';
+const WEBHOOK_VALIDER = 'https://n8n.srv987649.hstgr.cloud/webhook/Valider';
 
 // App State
 const state = {
     photoVoiture: null,
     photoMatricule: null,
     currentPhotoType: null,
-    stream: null
+    stream: null,
+    currentResult: null
 };
 
 // DOM Elements
@@ -40,7 +42,21 @@ const elements = {
 
     // Other elements
     washType: document.getElementById('washType'),
-    statusMessage: document.getElementById('statusMessage')
+    statusMessage: document.getElementById('statusMessage'),
+
+    // Loading and Results elements
+    loadingOverlay: document.getElementById('loadingOverlay'),
+    resultsSection: document.getElementById('resultsSection'),
+    successResults: document.getElementById('successResults'),
+    errorResults: document.getElementById('errorResults'),
+    resultCategorie: document.getElementById('resultCategorie'),
+    resultLavageType: document.getElementById('resultLavageType'),
+    resultPlate: document.getElementById('resultPlate'),
+    resultPrix: document.getElementById('resultPrix'),
+    errorMessage: document.getElementById('errorMessage'),
+    btnApprouver: document.getElementById('btnApprouver'),
+    btnRecommencerResults: document.getElementById('btnRecommencerResults'),
+    btnRecommencerError: document.getElementById('btnRecommencerError')
 };
 
 // Camera hints for each photo type
@@ -63,6 +79,9 @@ function init() {
     elements.retakeVoiture.addEventListener('click', () => retakePhoto('voiture'));
     elements.retakeMatricule.addEventListener('click', () => retakePhoto('matricule'));
     elements.washType.addEventListener('change', updateSubmitButton);
+    elements.btnApprouver.addEventListener('click', approveResult);
+    elements.btnRecommencerResults.addEventListener('click', goBackToMain);
+    elements.btnRecommencerError.addEventListener('click', goBackToMain);
 
     // Update submit button state when photos or wash type change
     updateSubmitButton();
@@ -203,9 +222,9 @@ async function submitPhotos() {
     }
     const timestamp = new Date().toISOString();
 
-    // Disable button and show loading state
-    setSubmitLoading(true);
+    // Show loading overlay
     hideStatus();
+    showLoading(true);
 
     try {
         // Send all data to single webhook
@@ -216,19 +235,28 @@ async function submitPhotos() {
             timestamp: timestamp
         });
 
-        // Check result
-        if (result.success) {
-            showStatus('Photos envoyées avec succès!', 'success');
-            resetApp();
+        // Hide loading
+        showLoading(false);
+
+        // Handle response
+        if (result.success && result.data) {
+            // Check if response is an array with data (success case)
+            if (Array.isArray(result.data) && result.data.length > 0 && result.data[0].Categorie) {
+                showSuccessResults(result.data[0]);
+            } else if (typeof result.data === 'string') {
+                // Error message from webhook
+                showErrorResults(result.data);
+            } else {
+                showErrorResults('Réponse inattendue du serveur.');
+            }
         } else {
-            showStatus('Erreur d\'envoi. Veuillez réessayer.', 'error');
+            showErrorResults('Erreur de connexion. Veuillez réessayer.');
         }
 
     } catch (error) {
         console.error('Submit error:', error);
-        showStatus('Erreur de connexion. Veuillez réessayer.', 'error');
-    } finally {
-        setSubmitLoading(false);
+        showLoading(false);
+        showErrorResults('Erreur de connexion. Veuillez réessayer.');
     }
 }
 
@@ -236,7 +264,7 @@ async function submitPhotos() {
  * Send data to a webhook
  * @param {string} url - Webhook URL
  * @param {Object} data - Data to send
- * @returns {Object} Result object with success status
+ * @returns {Object} Result object with success status and response data
  */
 async function sendToWebhook(url, data) {
     try {
@@ -248,9 +276,18 @@ async function sendToWebhook(url, data) {
             body: JSON.stringify(data)
         });
 
+        let responseData;
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+            responseData = await response.json();
+        } else {
+            responseData = await response.text();
+        }
+
         return {
             success: response.ok,
-            status: response.status
+            status: response.status,
+            data: responseData
         };
 
     } catch (error) {
@@ -259,25 +296,6 @@ async function sendToWebhook(url, data) {
             success: false,
             error: error.message
         };
-    }
-}
-
-/**
- * Set submit button loading state
- * @param {boolean} loading - Whether to show loading state
- */
-function setSubmitLoading(loading) {
-    const btnText = elements.btnValider.querySelector('.btn-text');
-    const btnLoader = elements.btnValider.querySelector('.btn-loader');
-
-    if (loading) {
-        btnText.classList.add('hidden');
-        btnLoader.classList.remove('hidden');
-        elements.btnValider.disabled = true;
-    } else {
-        btnText.classList.remove('hidden');
-        btnLoader.classList.add('hidden');
-        updateSubmitButton();
     }
 }
 
@@ -302,6 +320,93 @@ function showStatus(message, type) {
  */
 function hideStatus() {
     elements.statusMessage.classList.add('hidden');
+}
+
+/**
+ * Show or hide loading overlay
+ * @param {boolean} show - Whether to show loading
+ */
+function showLoading(show) {
+    if (show) {
+        elements.loadingOverlay.classList.remove('hidden');
+    } else {
+        elements.loadingOverlay.classList.add('hidden');
+    }
+}
+
+/**
+ * Show success results with vehicle data
+ * @param {Object} data - Vehicle data from webhook
+ */
+function showSuccessResults(data) {
+    state.currentResult = data;
+
+    // Populate results table
+    elements.resultCategorie.textContent = data.Categorie || '-';
+    elements.resultLavageType.textContent = data.LavageType || '-';
+    elements.resultPlate.textContent = data.Plate || '-';
+    elements.resultPrix.textContent = data.Prix ? `${data.Prix} DT` : '-';
+
+    // Show success results, hide error
+    elements.errorResults.classList.add('hidden');
+    elements.successResults.classList.remove('hidden');
+    elements.resultsSection.classList.remove('hidden');
+}
+
+/**
+ * Show error results with message
+ * @param {string} message - Error message
+ */
+function showErrorResults(message) {
+    elements.errorMessage.textContent = message;
+
+    // Show error results, hide success
+    elements.successResults.classList.add('hidden');
+    elements.errorResults.classList.remove('hidden');
+    elements.resultsSection.classList.remove('hidden');
+}
+
+/**
+ * Go back to main screen from results
+ */
+function goBackToMain() {
+    // Hide results section
+    elements.resultsSection.classList.add('hidden');
+    elements.successResults.classList.add('hidden');
+    elements.errorResults.classList.add('hidden');
+
+    // Reset app state
+    resetApp();
+}
+
+/**
+ * Approve the result and send to validation webhook
+ */
+async function approveResult() {
+    if (!state.currentResult) return;
+
+    // Show loading
+    showLoading(true);
+
+    try {
+        const result = await sendToWebhook(WEBHOOK_VALIDER, state.currentResult);
+
+        showLoading(false);
+
+        if (result.success) {
+            // Hide results and show success
+            elements.resultsSection.classList.add('hidden');
+            elements.successResults.classList.add('hidden');
+            showStatus('Validation approuvée avec succès!', 'success');
+            resetApp();
+        } else {
+            showStatus('Erreur lors de la validation. Veuillez réessayer.', 'error');
+        }
+    } catch (error) {
+        console.error('Approval error:', error);
+        showLoading(false);
+        showStatus('Erreur de connexion. Veuillez réessayer.', 'error');
+    }
 }
 
 /**
