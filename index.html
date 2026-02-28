@@ -102,6 +102,36 @@
                 </button>
             </div>
 
+            <!-- History Section -->
+            <div class="history-section">
+                <h2 class="history-title">Historique</h2>
+
+                <!-- Search Box -->
+                <div class="search-box">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="search-icon">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <input type="text" id="historySearch" class="search-input" placeholder="Rechercher par matricule...">
+                </div>
+
+                <!-- History Table -->
+                <div class="history-table-container">
+                    <div id="historyTable" class="history-table">
+                        <!-- History rows will be dynamically added here -->
+                    </div>
+                    <div id="historyEmpty" class="history-empty hidden">
+                        <p>Aucun historique disponible</p>
+                    </div>
+                    <div id="historyLoading" class="history-loading hidden">
+                        <svg class="mini-spinner" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" fill="none" stroke-dasharray="32" stroke-linecap="round"/>
+                        </svg>
+                        <span>Chargement...</span>
+                    </div>
+                </div>
+            </div>
+
             <!-- Status Message -->
             <div id="statusMessage" class="status-message hidden"></div>
 

@@ -6,6 +6,7 @@
 // Webhook URLs
 const WEBHOOK_URL = 'https://n8n.srv987649.hstgr.cloud/webhook/Lavage';
 const WEBHOOK_VALIDER = 'https://n8n.srv987649.hstgr.cloud/webhook/Valider';
+const WEBHOOK_TRASH = 'https://n8n.srv987649.hstgr.cloud/webhook/Trash';
 
 // App State
 const state = {
@@ -13,7 +14,8 @@ const state = {
     photoMatricule: null,
     currentPhotoType: null,
     stream: null,
-    currentResult: null
+    currentResult: null,
+    historyData: []
 };
 
 // DOM Elements
@@ -56,7 +58,13 @@ const elements = {
     errorMessage: document.getElementById('errorMessage'),
     btnApprouver: document.getElementById('btnApprouver'),
     btnRecommencerResults: document.getElementById('btnRecommencerResults'),
-    btnRecommencerError: document.getElementById('btnRecommencerError')
+    btnRecommencerError: document.getElementById('btnRecommencerError'),
+
+    // History elements
+    historySearch: document.getElementById('historySearch'),
+    historyTable: document.getElementById('historyTable'),
+    historyEmpty: document.getElementById('historyEmpty'),
+    historyLoading: document.getElementById('historyLoading')
 };
 
 // Camera hints for each photo type
@@ -82,9 +90,13 @@ function init() {
     elements.btnApprouver.addEventListener('click', approveResult);
     elements.btnRecommencerResults.addEventListener('click', goBackToMain);
     elements.btnRecommencerError.addEventListener('click', goBackToMain);
+    elements.historySearch.addEventListener('input', filterHistory);
 
     // Update submit button state when photos or wash type change
     updateSubmitButton();
+
+    // Load history data
+    fetchHistory();
 }
 
 /**
@@ -399,6 +411,8 @@ async function approveResult() {
             elements.successResults.classList.add('hidden');
             showStatus('Validation approuvée avec succès!', 'success');
             resetApp();
+            // Refresh history
+            fetchHistory();
         } else {
             showStatus('Erreur lors de la validation. Veuillez réessayer.', 'error');
         }
@@ -407,6 +421,195 @@ async function approveResult() {
         showLoading(false);
         showStatus('Erreur de connexion. Veuillez réessayer.', 'error');
     }
+}
+
+/**
+ * Fetch history data from webhook
+ */
+async function fetchHistory() {
+    // Show loading state
+    elements.historyTable.classList.add('hidden');
+    elements.historyEmpty.classList.add('hidden');
+    elements.historyLoading.classList.remove('hidden');
+
+    try {
+        const response = await fetch(WEBHOOK_TRASH, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (response.ok) {
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+                state.historyData = await response.json();
+            } else {
+                state.historyData = [];
+            }
+        } else {
+            state.historyData = [];
+        }
+
+        // Display the history
+        displayHistory(state.historyData);
+
+    } catch (error) {
+        console.error('Error fetching history:', error);
+        state.historyData = [];
+        displayHistory([]);
+    }
+}
+
+/**
+ * Display history data in the table
+ * @param {Array} data - History data to display
+ */
+function displayHistory(data) {
+    elements.historyLoading.classList.add('hidden');
+
+    if (!data || data.length === 0) {
+        elements.historyTable.classList.add('hidden');
+        elements.historyEmpty.classList.remove('hidden');
+        return;
+    }
+
+    elements.historyEmpty.classList.add('hidden');
+    elements.historyTable.classList.remove('hidden');
+
+    // Clear existing rows
+    elements.historyTable.innerHTML = '';
+
+    // Create rows for each history item
+    data.forEach((item, index) => {
+        const row = createHistoryRow(item, index);
+        elements.historyTable.appendChild(row);
+    });
+}
+
+/**
+ * Create a history row element
+ * @param {Object} item - History item data
+ * @param {number} index - Index in the array
+ * @returns {HTMLElement} Row element
+ */
+function createHistoryRow(item, index) {
+    const row = document.createElement('div');
+    row.className = 'history-row';
+    row.dataset.index = index;
+
+    row.innerHTML = `
+        <div class="history-row-content">
+            <div class="history-item">
+                <span class="history-item-label">Matricule</span>
+                <span class="history-item-value">${item.Matricule || '-'}</span>
+            </div>
+            <div class="history-item">
+                <span class="history-item-label">Catégorie</span>
+                <span class="history-item-value">${item.Categorie || '-'}</span>
+            </div>
+            <div class="history-item">
+                <span class="history-item-label">Type de Lavage</span>
+                <span class="history-item-value">${item['Type de Lavage'] || '-'}</span>
+            </div>
+            <div class="history-item">
+                <span class="history-item-label">Prix</span>
+                <span class="history-item-value">${item.Prix ? item.Prix + ' DT' : '-'}</span>
+            </div>
+        </div>
+        <button class="history-delete-btn" title="Supprimer">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                <line x1="10" y1="11" x2="10" y2="17"></line>
+                <line x1="14" y1="11" x2="14" y2="17"></line>
+            </svg>
+        </button>
+    `;
+
+    // Add delete event listener
+    const deleteBtn = row.querySelector('.history-delete-btn');
+    deleteBtn.addEventListener('click', () => deleteHistoryItem(item, index, row));
+
+    return row;
+}
+
+/**
+ * Delete a history item
+ * @param {Object} item - Item to delete
+ * @param {number} index - Index in the array
+ * @param {HTMLElement} rowElement - Row element to remove
+ */
+async function deleteHistoryItem(item, index, rowElement) {
+    // Add visual feedback
+    rowElement.style.opacity = '0.5';
+    rowElement.style.pointerEvents = 'none';
+
+    try {
+        const result = await sendToWebhook(WEBHOOK_TRASH, {
+            action: 'delete',
+            item: item
+        });
+
+        if (result.success) {
+            // Remove from state
+            state.historyData.splice(index, 1);
+
+            // Animate removal
+            rowElement.style.transition = 'all 0.3s ease';
+            rowElement.style.transform = 'translateX(100%)';
+            rowElement.style.opacity = '0';
+
+            setTimeout(() => {
+                rowElement.remove();
+
+                // Check if table is empty
+                if (state.historyData.length === 0) {
+                    elements.historyTable.classList.add('hidden');
+                    elements.historyEmpty.classList.remove('hidden');
+                } else {
+                    // Re-render to update indices
+                    displayHistory(state.historyData);
+                }
+            }, 300);
+
+        } else {
+            // Restore row state
+            rowElement.style.opacity = '1';
+            rowElement.style.pointerEvents = 'auto';
+            showStatus('Erreur lors de la suppression.', 'error');
+        }
+
+    } catch (error) {
+        console.error('Delete error:', error);
+        rowElement.style.opacity = '1';
+        rowElement.style.pointerEvents = 'auto';
+        showStatus('Erreur de connexion.', 'error');
+    }
+}
+
+/**
+ * Filter history based on search input
+ */
+function filterHistory() {
+    const searchTerm = elements.historySearch.value.toLowerCase().trim();
+
+    if (!searchTerm) {
+        displayHistory(state.historyData);
+        return;
+    }
+
+    const filtered = state.historyData.filter(item => {
+        const matricule = (item.Matricule || '').toLowerCase();
+        const categorie = (item.Categorie || '').toLowerCase();
+        const typeLavage = (item['Type de Lavage'] || '').toLowerCase();
+
+        return matricule.includes(searchTerm) ||
+               categorie.includes(searchTerm) ||
+               typeLavage.includes(searchTerm);
+    });
+
+    displayHistory(filtered);
 }
 
 /**
