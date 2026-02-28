@@ -64,7 +64,8 @@ const elements = {
     historySearch: document.getElementById('historySearch'),
     historyTable: document.getElementById('historyTable'),
     historyEmpty: document.getElementById('historyEmpty'),
-    historyLoading: document.getElementById('historyLoading')
+    historyLoading: document.getElementById('historyLoading'),
+    btnRefreshHistory: document.getElementById('btnRefreshHistory')
 };
 
 // Camera hints for each photo type
@@ -91,6 +92,7 @@ function init() {
     elements.btnRecommencerResults.addEventListener('click', goBackToMain);
     elements.btnRecommencerError.addEventListener('click', goBackToMain);
     elements.historySearch.addEventListener('input', filterHistory);
+    elements.btnRefreshHistory.addEventListener('click', refreshHistory);
 
     // Update submit button state when photos or wash type change
     updateSubmitButton();
@@ -610,6 +612,25 @@ function filterHistory() {
     });
 
     displayHistory(filtered);
+}
+
+/**
+ * Refresh history data with button animation
+ */
+async function refreshHistory() {
+    // Add spinning animation to button
+    elements.btnRefreshHistory.classList.add('spinning');
+    elements.btnRefreshHistory.disabled = true;
+
+    // Clear search input
+    elements.historySearch.value = '';
+
+    // Fetch history
+    await fetchHistory();
+
+    // Remove spinning animation
+    elements.btnRefreshHistory.classList.remove('spinning');
+    elements.btnRefreshHistory.disabled = false;
 }
 
 /**
