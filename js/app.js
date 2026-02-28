@@ -435,21 +435,26 @@ async function fetchHistory() {
     elements.historyLoading.classList.remove('hidden');
 
     try {
+        // Use POST with action parameter (n8n webhooks work better with POST)
         const response = await fetch(WEBHOOK_TRASH, {
-            method: 'GET',
+            method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
-            }
+            },
+            body: JSON.stringify({ action: 'fetch' })
         });
 
         if (response.ok) {
             const contentType = response.headers.get('content-type');
             if (contentType && contentType.includes('application/json')) {
-                state.historyData = await response.json();
+                const data = await response.json();
+                // Handle both array response and object with data property
+                state.historyData = Array.isArray(data) ? data : (data.data || []);
             } else {
                 state.historyData = [];
             }
         } else {
+            console.error('Fetch history failed:', response.status);
             state.historyData = [];
         }
 
