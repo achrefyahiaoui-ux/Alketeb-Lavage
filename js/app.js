@@ -10,30 +10,40 @@ const WEBHOOK_TRASH = 'https://n8n.srv987649.hstgr.cloud/webhook/Trash';
 
 // App State
 const state = {
-    photoVoiture: null,
+    photoAvant: null,
+    photoArriere: null,
     photoMatricule: null,
     currentPhotoType: null,
     stream: null,
     currentResult: null,
-    historyData: []
+    historyData: [],
+    washOptions: {
+        exterieur: false,
+        interieur: false,
+        cire: false
+    }
 };
 
 // DOM Elements
 const elements = {
-    // Buttons
-    btnPhotoVoiture: document.getElementById('btnPhotoVoiture'),
+    // Photo Buttons
+    btnPhotoAvant: document.getElementById('btnPhotoAvant'),
+    btnPhotoArriere: document.getElementById('btnPhotoArriere'),
     btnPhotoMatricule: document.getElementById('btnPhotoMatricule'),
     btnValider: document.getElementById('btnValider'),
     btnRestart: document.getElementById('btnRestart'),
     btnCapture: document.getElementById('btnCapture'),
     btnCloseCamera: document.getElementById('btnCloseCamera'),
-    retakeVoiture: document.getElementById('retakeVoiture'),
+    retakeAvant: document.getElementById('retakeAvant'),
+    retakeArriere: document.getElementById('retakeArriere'),
     retakeMatricule: document.getElementById('retakeMatricule'),
 
     // Preview elements
-    previewVoiture: document.getElementById('previewVoiture'),
+    previewAvant: document.getElementById('previewAvant'),
+    previewArriere: document.getElementById('previewArriere'),
     previewMatricule: document.getElementById('previewMatricule'),
-    imgVoiture: document.getElementById('imgVoiture'),
+    imgAvant: document.getElementById('imgAvant'),
+    imgArriere: document.getElementById('imgArriere'),
     imgMatricule: document.getElementById('imgMatricule'),
 
     // Camera elements
@@ -42,8 +52,10 @@ const elements = {
     cameraHint: document.getElementById('cameraHint'),
     photoCanvas: document.getElementById('photoCanvas'),
 
-    // Other elements
-    washType: document.getElementById('washType'),
+    // Wash toggle buttons
+    toggleExterieur: document.getElementById('toggleExterieur'),
+    toggleInterieur: document.getElementById('toggleInterieur'),
+    toggleCire: document.getElementById('toggleCire'),
     statusMessage: document.getElementById('statusMessage'),
 
     // Loading and Results elements
@@ -68,26 +80,34 @@ const elements = {
     btnRefreshHistory: document.getElementById('btnRefreshHistory')
 };
 
-// Camera hints for each photo type
+// Camera hints for each photo type (Arabic)
 const CAMERA_HINTS = {
-    voiture: 'Prenez une photo de la voiture',
-    matricule: 'Prenez une photo de la plaque d\'immatriculation'
+    avant: 'التقط صورة أمامية للسيارة',
+    arriere: 'التقط صورة خلفية للسيارة',
+    matricule: 'التقط صورة للوحة السيارة'
 };
 
 /**
  * Initialize the application
  */
 function init() {
-    // Bind event listeners
-    elements.btnPhotoVoiture.addEventListener('click', () => openCamera('voiture'));
+    // Bind photo button event listeners
+    elements.btnPhotoAvant.addEventListener('click', () => openCamera('avant'));
+    elements.btnPhotoArriere.addEventListener('click', () => openCamera('arriere'));
     elements.btnPhotoMatricule.addEventListener('click', () => openCamera('matricule'));
     elements.btnCapture.addEventListener('click', capturePhoto);
     elements.btnCloseCamera.addEventListener('click', closeCamera);
     elements.btnValider.addEventListener('click', submitPhotos);
     elements.btnRestart.addEventListener('click', restartApp);
-    elements.retakeVoiture.addEventListener('click', () => retakePhoto('voiture'));
+    elements.retakeAvant.addEventListener('click', () => retakePhoto('avant'));
+    elements.retakeArriere.addEventListener('click', () => retakePhoto('arriere'));
     elements.retakeMatricule.addEventListener('click', () => retakePhoto('matricule'));
-    elements.washType.addEventListener('change', updateSubmitButton);
+
+    // Bind wash toggle button event listeners
+    elements.toggleExterieur.addEventListener('click', () => toggleWashOption('exterieur'));
+    elements.toggleInterieur.addEventListener('click', () => toggleWashOption('interieur'));
+    elements.toggleCire.addEventListener('click', () => toggleWashOption('cire'));
+
     elements.btnApprouver.addEventListener('click', approveResult);
     elements.btnRecommencerResults.addEventListener('click', goBackToMain);
     elements.btnRecommencerError.addEventListener('click', goBackToMain);
@@ -99,6 +119,30 @@ function init() {
 
     // Load history data
     fetchHistory();
+}
+
+/**
+ * Toggle a wash option on/off
+ * @param {string} option - 'exterieur', 'interieur', or 'cire'
+ */
+function toggleWashOption(option) {
+    state.washOptions[option] = !state.washOptions[option];
+
+    // Update button visual state
+    const buttonMap = {
+        exterieur: elements.toggleExterieur,
+        interieur: elements.toggleInterieur,
+        cire: elements.toggleCire
+    };
+
+    const button = buttonMap[option];
+    if (state.washOptions[option]) {
+        button.classList.add('active');
+    } else {
+        button.classList.remove('active');
+    }
+
+    updateSubmitButton();
 }
 
 /**
@@ -176,10 +220,14 @@ function capturePhoto() {
     const imageData = canvas.toDataURL('image/jpeg', 0.85);
 
     // Store photo based on type
-    if (state.currentPhotoType === 'voiture') {
-        state.photoVoiture = imageData;
-        elements.imgVoiture.src = imageData;
-        elements.previewVoiture.classList.remove('hidden');
+    if (state.currentPhotoType === 'avant') {
+        state.photoAvant = imageData;
+        elements.imgAvant.src = imageData;
+        elements.previewAvant.classList.remove('hidden');
+    } else if (state.currentPhotoType === 'arriere') {
+        state.photoArriere = imageData;
+        elements.imgArriere.src = imageData;
+        elements.previewArriere.classList.remove('hidden');
     } else if (state.currentPhotoType === 'matricule') {
         state.photoMatricule = imageData;
         elements.imgMatricule.src = imageData;
@@ -193,13 +241,17 @@ function capturePhoto() {
 
 /**
  * Clear a photo and allow retaking
- * @param {string} type - 'voiture' or 'matricule'
+ * @param {string} type - 'avant', 'arriere', or 'matricule'
  */
 function retakePhoto(type) {
-    if (type === 'voiture') {
-        state.photoVoiture = null;
-        elements.imgVoiture.src = '';
-        elements.previewVoiture.classList.add('hidden');
+    if (type === 'avant') {
+        state.photoAvant = null;
+        elements.imgAvant.src = '';
+        elements.previewAvant.classList.add('hidden');
+    } else if (type === 'arriere') {
+        state.photoArriere = null;
+        elements.imgArriere.src = '';
+        elements.previewArriere.classList.add('hidden');
     } else if (type === 'matricule') {
         state.photoMatricule = null;
         elements.imgMatricule.src = '';
@@ -211,27 +263,39 @@ function retakePhoto(type) {
 }
 
 /**
- * Update submit button state based on captured photos and wash type
+ * Update submit button state based on captured photos and wash options
  */
 function updateSubmitButton() {
-    const hasAllPhotos = state.photoVoiture && state.photoMatricule;
-    const hasWashType = elements.washType.value !== '';
-    elements.btnValider.disabled = !(hasAllPhotos && hasWashType);
+    const hasAllPhotos = state.photoAvant && state.photoArriere && state.photoMatricule;
+    const hasWashOption = state.washOptions.exterieur || state.washOptions.interieur || state.washOptions.cire;
+    elements.btnValider.disabled = !(hasAllPhotos && hasWashOption);
+}
+
+/**
+ * Get selected wash options as a comma-separated string
+ * @returns {string} Selected wash options
+ */
+function getSelectedWashOptions() {
+    const options = [];
+    if (state.washOptions.exterieur) options.push('غسيل خارجي');
+    if (state.washOptions.interieur) options.push('غسيل داخلي');
+    if (state.washOptions.cire) options.push('شمع');
+    return options.join(', ');
 }
 
 /**
  * Submit photos to the webhook
  */
 async function submitPhotos() {
-    if (!state.photoVoiture || !state.photoMatricule) {
-        showStatus('Veuillez prendre les deux photos', 'error');
+    if (!state.photoAvant || !state.photoArriere || !state.photoMatricule) {
+        showStatus('الرجاء التقاط جميع الصور', 'error');
         return;
     }
 
-    const washType = elements.washType.value;
+    const washType = getSelectedWashOptions();
 
     if (!washType) {
-        showStatus('Veuillez sélectionner le type de lavage', 'error');
+        showStatus('الرجاء اختيار نوع الغسيل', 'error');
         return;
     }
     const timestamp = new Date().toISOString();
@@ -243,9 +307,11 @@ async function submitPhotos() {
     try {
         // Send all data to single webhook
         const result = await sendToWebhook(WEBHOOK_URL, {
-            image1: state.photoVoiture,
-            image2: state.photoMatricule,
+            imageAvant: state.photoAvant,
+            imageArriere: state.photoArriere,
+            imageMatricule: state.photoMatricule,
             washType: washType,
+            washOptions: state.washOptions,
             timestamp: timestamp
         });
 
@@ -643,17 +709,23 @@ async function refreshHistory() {
  */
 function resetApp() {
     // Clear photos
-    state.photoVoiture = null;
+    state.photoAvant = null;
+    state.photoArriere = null;
     state.photoMatricule = null;
 
     // Clear previews
-    elements.imgVoiture.src = '';
+    elements.imgAvant.src = '';
+    elements.imgArriere.src = '';
     elements.imgMatricule.src = '';
-    elements.previewVoiture.classList.add('hidden');
+    elements.previewAvant.classList.add('hidden');
+    elements.previewArriere.classList.add('hidden');
     elements.previewMatricule.classList.add('hidden');
 
-    // Reset dropdown
-    elements.washType.value = '';
+    // Reset wash options
+    state.washOptions = { exterieur: false, interieur: false, cire: false };
+    elements.toggleExterieur.classList.remove('active');
+    elements.toggleInterieur.classList.remove('active');
+    elements.toggleCire.classList.remove('active');
 
     // Update submit button
     updateSubmitButton();
@@ -664,17 +736,23 @@ function resetApp() {
  */
 function restartApp() {
     // Clear photos
-    state.photoVoiture = null;
+    state.photoAvant = null;
+    state.photoArriere = null;
     state.photoMatricule = null;
 
     // Clear previews
-    elements.imgVoiture.src = '';
+    elements.imgAvant.src = '';
+    elements.imgArriere.src = '';
     elements.imgMatricule.src = '';
-    elements.previewVoiture.classList.add('hidden');
+    elements.previewAvant.classList.add('hidden');
+    elements.previewArriere.classList.add('hidden');
     elements.previewMatricule.classList.add('hidden');
 
-    // Reset dropdown
-    elements.washType.value = '';
+    // Reset wash options
+    state.washOptions = { exterieur: false, interieur: false, cire: false };
+    elements.toggleExterieur.classList.remove('active');
+    elements.toggleInterieur.classList.remove('active');
+    elements.toggleCire.classList.remove('active');
 
     // Hide any status messages
     hideStatus();
@@ -683,7 +761,7 @@ function restartApp() {
     updateSubmitButton();
 
     // Show confirmation
-    showStatus('Application redémarrée', 'success');
+    showStatus('تم إعادة التشغيل', 'success');
 }
 
 // Initialize app when DOM is ready

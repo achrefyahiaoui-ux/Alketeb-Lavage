@@ -17,20 +17,20 @@
 
         <!-- Main Content -->
         <main class="main-content">
-            <!-- Photo Voiture Button -->
+            <!-- Photo Avant (Front) Button -->
             <div class="photo-section">
-                <button id="btnPhotoVoiture" class="photo-btn">
+                <button id="btnPhotoAvant" class="photo-btn">
                     <span class="btn-icon">
                         <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
                             <circle cx="12" cy="13" r="4"></circle>
                         </svg>
                     </span>
-                    <span class="btn-text">Photo Voiture</span>
+                    <span class="btn-text">التقط صورة أمامية للسيارة</span>
                 </button>
-                <div id="previewVoiture" class="preview-container hidden">
-                    <img id="imgVoiture" alt="Photo de la voiture">
-                    <button id="retakeVoiture" class="retake-btn" title="Reprendre">
+                <div id="previewAvant" class="preview-container hidden">
+                    <img id="imgAvant" alt="صورة أمامية للسيارة">
+                    <button id="retakeAvant" class="retake-btn" title="إعادة">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path>
                             <path d="M21 3v5h-5"></path>
@@ -41,7 +41,31 @@
                 </div>
             </div>
 
-            <!-- Photo Matricule Button -->
+            <!-- Photo Arriere (Rear) Button -->
+            <div class="photo-section">
+                <button id="btnPhotoArriere" class="photo-btn">
+                    <span class="btn-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                            <circle cx="12" cy="13" r="4"></circle>
+                        </svg>
+                    </span>
+                    <span class="btn-text">التقط صورة خلفية للسيارة</span>
+                </button>
+                <div id="previewArriere" class="preview-container hidden">
+                    <img id="imgArriere" alt="صورة خلفية للسيارة">
+                    <button id="retakeArriere" class="retake-btn" title="إعادة">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path>
+                            <path d="M21 3v5h-5"></path>
+                            <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path>
+                            <path d="M8 16H3v5"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Photo Matricule (License Plate) Button -->
             <div class="photo-section">
                 <button id="btnPhotoMatricule" class="photo-btn">
                     <span class="btn-icon">
@@ -51,11 +75,11 @@
                             <line x1="9" y1="21" x2="9" y2="9"></line>
                         </svg>
                     </span>
-                    <span class="btn-text">Photo Matricule</span>
+                    <span class="btn-text">التقط صورة للوحة السيارة</span>
                 </button>
                 <div id="previewMatricule" class="preview-container hidden">
-                    <img id="imgMatricule" alt="Photo de la matricule">
-                    <button id="retakeMatricule" class="retake-btn" title="Reprendre">
+                    <img id="imgMatricule" alt="صورة لوحة السيارة">
+                    <button id="retakeMatricule" class="retake-btn" title="إعادة">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path>
                             <path d="M21 3v5h-5"></path>
@@ -66,13 +90,19 @@
                 </div>
             </div>
 
-            <!-- Dropdown for Wash Type -->
-            <div class="dropdown-section">
-                <select id="washType" class="wash-dropdown">
-                    <option value="">Selectionner le type de lavage</option>
-                    <option value="Lavage Exterieur Uniquement">Lavage Exterieur Uniquement</option>
-                    <option value="Lavage Complet">Lavage Complet</option>
-                </select>
+            <!-- Wash Options Toggle Buttons -->
+            <div class="wash-options-section">
+                <div class="wash-toggle-group">
+                    <button id="toggleExterieur" class="wash-toggle-btn" data-value="غسيل خارجي">
+                        <span class="toggle-text">غسيل خارجي</span>
+                    </button>
+                    <button id="toggleInterieur" class="wash-toggle-btn" data-value="غسيل داخلي">
+                        <span class="toggle-text">غسيل داخلي</span>
+                    </button>
+                    <button id="toggleCire" class="wash-toggle-btn" data-value="شمع">
+                        <span class="toggle-text">شمع</span>
+                    </button>
+                </div>
             </div>
 
             <!-- Submit Button -->

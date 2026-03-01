@@ -97,6 +97,7 @@ html, body {
     gap: 12px;
     box-shadow: var(--shadow);
     transition: var(--transition);
+    direction: rtl;
 }
 
 .photo-btn:hover {
@@ -153,34 +154,59 @@ html, body {
     background: var(--primary-blue);
 }
 
-/* Dropdown Section */
-.dropdown-section {
+/* Wash Options Section */
+.wash-options-section {
     width: 100%;
+    margin-top: 10px;
 }
 
-.wash-dropdown {
+.wash-toggle-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.wash-toggle-btn {
     width: 100%;
-    padding: 16px 20px;
-    font-size: 1rem;
-    font-weight: 500;
-    color: #333;
-    background: var(--overlay-light);
+    padding: 16px 24px;
+    background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
     border: 2px solid transparent;
     border-radius: var(--border-radius);
+    color: var(--white);
+    font-size: 1.1rem;
+    font-weight: 600;
     cursor: pointer;
-    appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23333' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 16px center;
-    background-size: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
     box-shadow: var(--shadow-light);
     transition: var(--transition);
+    direction: rtl;
 }
 
-.wash-dropdown:focus {
-    outline: none;
-    border-color: var(--primary-blue);
-    box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.3);
+.wash-toggle-btn:hover {
+    background: linear-gradient(135deg, #5a6268 0%, #3d4349 100%);
+    transform: translateY(-1px);
+}
+
+.wash-toggle-btn:active {
+    transform: translateY(0);
+}
+
+/* Active/Selected state - Green */
+.wash-toggle-btn.active {
+    background: linear-gradient(135deg, var(--success-green) 0%, #1e7e34 100%);
+    border-color: var(--success-green);
+    box-shadow: 0 4px 15px rgba(40, 167, 69, 0.4);
+}
+
+.wash-toggle-btn.active:hover {
+    background: linear-gradient(135deg, #2dce57 0%, #28a745 100%);
+}
+
+.toggle-text {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
 /* Submit Button */
@@ -392,10 +418,11 @@ html, body {
     color: var(--white);
     padding: 10px 20px;
     border-radius: 20px;
-    font-size: 0.9rem;
+    font-size: 1rem;
     font-weight: 500;
     text-align: center;
     max-width: 90%;
+    direction: rtl;
 }
 
 /* Loading Overlay */
