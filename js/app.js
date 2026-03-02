@@ -8,9 +8,15 @@ const WEBHOOK_URL = 'https://n8n.srv987649.hstgr.cloud/webhook/Lavage';
 const WEBHOOK_VALIDER = 'https://n8n.srv987649.hstgr.cloud/webhook/Valider';
 const WEBHOOK_TRASH = 'https://n8n.srv987649.hstgr.cloud/webhook/Trash';
 const WEBHOOK_CATEGORIES = 'https://n8n.srv987649.hstgr.cloud/webhook/CarCategory';
+const WEBHOOK_LOGIN = 'https://n8n.srv987649.hstgr.cloud/webhook/LogIn';
 
 // App State
 const state = {
+    // Auth state
+    isLoggedIn: false,
+    currentUser: null,
+    users: [],
+    // Photo state
     photoAvant: null,
     photoArriere: null,
     photoMatricule: null,
@@ -41,6 +47,21 @@ const state = {
 
 // DOM Elements
 const elements = {
+    // Login elements
+    loginSection: document.getElementById('loginSection'),
+    loginForm: document.getElementById('loginForm'),
+    loginUsername: document.getElementById('loginUsername'),
+    loginPassword: document.getElementById('loginPassword'),
+    loginError: document.getElementById('loginError'),
+    loginErrorText: document.getElementById('loginErrorText'),
+    btnLogin: document.getElementById('btnLogin'),
+
+    // Header & Main content
+    appHeader: document.getElementById('appHeader'),
+    mainContent: document.getElementById('mainContent'),
+    currentUserName: document.getElementById('currentUserName'),
+    btnLogout: document.getElementById('btnLogout'),
+
     // Photo Buttons
     btnPhotoAvant: document.getElementById('btnPhotoAvant'),
     btnPhotoArriere: document.getElementById('btnPhotoArriere'),
@@ -118,6 +139,13 @@ const CAMERA_HINTS = {
  * Initialize the application
  */
 function init() {
+    // Check for saved login session
+    checkSavedSession();
+
+    // Bind login event listeners
+    elements.loginForm.addEventListener('submit', handleLogin);
+    elements.btnLogout.addEventListener('click', logout);
+
     // Bind photo button event listeners
     elements.btnPhotoAvant.addEventListener('click', () => openCamera('avant'));
     elements.btnPhotoArriere.addEventListener('click', () => openCamera('arriere'));
@@ -143,9 +171,171 @@ function init() {
 
     // Update submit button state when photos or wash type change
     updateSubmitButton();
+}
+
+/**
+ * Check for saved login session
+ */
+function checkSavedSession() {
+    const savedUser = sessionStorage.getItem('currentUser');
+    if (savedUser) {
+        try {
+            state.currentUser = JSON.parse(savedUser);
+            state.isLoggedIn = true;
+            showMainApp();
+        } catch (e) {
+            sessionStorage.removeItem('currentUser');
+            showLoginSection();
+        }
+    } else {
+        showLoginSection();
+    }
+}
+
+/**
+ * Handle login form submission
+ * @param {Event} e - Form submit event
+ */
+async function handleLogin(e) {
+    e.preventDefault();
+
+    const username = elements.loginUsername.value.trim();
+    const password = elements.loginPassword.value.trim();
+
+    if (!username || !password) {
+        showLoginError('الرجاء إدخال اسم المستخدم وكلمة المرور');
+        return;
+    }
+
+    // Show loading state
+    setLoginLoading(true);
+    hideLoginError();
+
+    try {
+        // Fetch users from webhook
+        const response = await fetch(WEBHOOK_LOGIN, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ action: 'fetch' })
+        });
+
+        if (!response.ok) {
+            throw new Error('Network error');
+        }
+
+        const users = await response.json();
+        state.users = Array.isArray(users) ? users : [];
+
+        // Find matching user
+        const user = state.users.find(u =>
+            u.LogIn === username && String(u.MP) === password
+        );
+
+        if (user) {
+            // Login successful
+            state.currentUser = user;
+            state.isLoggedIn = true;
+
+            // Save to session storage
+            sessionStorage.setItem('currentUser', JSON.stringify(user));
+
+            // Clear form
+            elements.loginUsername.value = '';
+            elements.loginPassword.value = '';
+
+            // Show main app
+            showMainApp();
+        } else {
+            showLoginError('اسم المستخدم أو كلمة المرور غير صحيحة');
+        }
+
+    } catch (error) {
+        console.error('Login error:', error);
+        showLoginError('خطأ في الاتصال. يرجى المحاولة مرة أخرى');
+    } finally {
+        setLoginLoading(false);
+    }
+}
+
+/**
+ * Show login error message
+ * @param {string} message - Error message
+ */
+function showLoginError(message) {
+    elements.loginErrorText.textContent = message;
+    elements.loginError.classList.remove('hidden');
+}
+
+/**
+ * Hide login error message
+ */
+function hideLoginError() {
+    elements.loginError.classList.add('hidden');
+}
+
+/**
+ * Set login button loading state
+ * @param {boolean} loading - Whether to show loading
+ */
+function setLoginLoading(loading) {
+    const btnText = elements.btnLogin.querySelector('.btn-text');
+    const btnLoader = elements.btnLogin.querySelector('.btn-loader');
+
+    if (loading) {
+        btnText.classList.add('hidden');
+        btnLoader.classList.remove('hidden');
+        elements.btnLogin.disabled = true;
+    } else {
+        btnText.classList.remove('hidden');
+        btnLoader.classList.add('hidden');
+        elements.btnLogin.disabled = false;
+    }
+}
+
+/**
+ * Show the login section
+ */
+function showLoginSection() {
+    elements.loginSection.classList.remove('hidden');
+    elements.appHeader.classList.add('hidden');
+    elements.mainContent.classList.add('hidden');
+}
+
+/**
+ * Show the main app
+ */
+function showMainApp() {
+    elements.loginSection.classList.add('hidden');
+    elements.appHeader.classList.remove('hidden');
+    elements.mainContent.classList.remove('hidden');
+
+    // Update user name in header
+    if (state.currentUser) {
+        elements.currentUserName.textContent = state.currentUser.Utilisateur;
+    }
 
     // Load history data
     fetchHistory();
+}
+
+/**
+ * Logout the current user
+ */
+function logout() {
+    // Clear state
+    state.isLoggedIn = false;
+    state.currentUser = null;
+
+    // Clear session storage
+    sessionStorage.removeItem('currentUser');
+
+    // Reset app
+    resetApp();
+
+    // Show login section
+    showLoginSection();
 }
 
 /**
@@ -311,6 +501,25 @@ function getSelectedWashOptions() {
 }
 
 /**
+ * Get current user info for webhook payloads
+ * @returns {Object} User info object with ID and name
+ */
+function getUserInfo() {
+    if (state.currentUser) {
+        return {
+            userId: state.currentUser.ID,
+            userName: state.currentUser.Utilisateur,
+            userLogin: state.currentUser.LogIn
+        };
+    }
+    return {
+        userId: null,
+        userName: null,
+        userLogin: null
+    };
+}
+
+/**
  * Submit photos to the webhook
  */
 async function submitPhotos() {
@@ -334,6 +543,7 @@ async function submitPhotos() {
     try {
         // Send all data to single webhook
         const result = await sendToWebhook(WEBHOOK_URL, {
+            ...getUserInfo(),
             imageAvant: state.photoAvant,
             imageArriere: state.photoArriere,
             imageMatricule: state.photoMatricule,
@@ -578,7 +788,7 @@ async function fetchCategories() {
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ action: 'fetch' })
+            body: JSON.stringify({ action: 'fetch', ...getUserInfo() })
         });
 
         if (response.ok) {
@@ -717,8 +927,8 @@ function goBackToMain() {
 async function approveResult() {
     if (!state.currentResult) return;
 
-    // Build the result with corrections
-    const resultToSend = { ...state.currentResult };
+    // Build the result with corrections and user info
+    const resultToSend = { ...state.currentResult, ...getUserInfo() };
 
     // Include field validation states
     resultToSend.fieldValidations = { ...state.fieldValidations };
@@ -791,7 +1001,7 @@ async function fetchHistory() {
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ action: 'fetch' })
+            body: JSON.stringify({ action: 'fetch', ...getUserInfo() })
         });
 
         if (response.ok) {
@@ -905,7 +1115,8 @@ async function deleteHistoryItem(item, index, rowElement) {
     try {
         const result = await sendToWebhook(WEBHOOK_TRASH, {
             action: 'delete',
-            item: item
+            item: item,
+            ...getUserInfo()
         });
 
         if (result.success) {
