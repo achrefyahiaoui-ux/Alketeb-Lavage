@@ -460,6 +460,7 @@ html, body {
     font-weight: 600;
     text-align: center;
     max-width: 280px;
+    direction: rtl;
 }
 
 /* Results Section */
@@ -493,6 +494,7 @@ html, body {
     color: var(--white);
     text-align: center;
     margin-bottom: 8px;
+    direction: rtl;
 }
 
 .results-table {
@@ -508,25 +510,97 @@ html, body {
     flex-direction: column;
     padding: 16px 20px;
     border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    direction: rtl;
 }
 
 .result-row:last-child {
     border-bottom: none;
 }
 
+.result-row-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
 .result-label {
     font-size: 0.85rem;
     font-weight: 600;
     color: #666;
-    text-transform: uppercase;
     letter-spacing: 0.5px;
-    margin-bottom: 4px;
 }
 
 .result-value {
-    font-size: 1.25rem;
+    font-size: 1.1rem;
     font-weight: 700;
     color: #333;
+}
+
+/* Validation Buttons */
+.validation-buttons {
+    display: flex;
+    gap: 10px;
+    margin-top: 8px;
+}
+
+.validate-btn {
+    flex: 1;
+    padding: 10px 16px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    border: 2px solid transparent;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+    color: white;
+}
+
+.validate-btn:hover {
+    transform: translateY(-1px);
+}
+
+.validate-btn.correct-btn.active {
+    background: linear-gradient(135deg, var(--success-green) 0%, #1e7e34 100%);
+    border-color: var(--success-green);
+    box-shadow: 0 4px 15px rgba(40, 167, 69, 0.4);
+}
+
+.validate-btn.wrong-btn.active {
+    background: linear-gradient(135deg, var(--error-red) 0%, #bd2130 100%);
+    border-color: var(--error-red);
+    box-shadow: 0 4px 15px rgba(220, 53, 69, 0.4);
+}
+
+/* Correction Input */
+.correction-input {
+    margin-top: 10px;
+}
+
+.correction-select,
+.correction-textbox {
+    width: 100%;
+    padding: 12px 16px;
+    font-size: 1rem;
+    font-weight: 500;
+    color: #333;
+    background: #f8f9fa;
+    border: 2px solid #dee2e6;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    direction: rtl;
+}
+
+.correction-select:focus,
+.correction-textbox:focus {
+    outline: none;
+    border-color: var(--primary-blue);
+    box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.2);
+}
+
+.correction-textbox::placeholder {
+    color: #999;
 }
 
 .results-buttons {
@@ -587,6 +661,7 @@ html, body {
     font-weight: 600;
     color: var(--error-red);
     line-height: 1.5;
+    direction: rtl;
 }
 
 /* History Section */
@@ -743,7 +818,7 @@ html, body {
     background: transparent;
     border: none;
     border-radius: 50%;
-    color: #999;
+    color: var(--error-red);
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -754,8 +829,8 @@ html, body {
 }
 
 .history-delete-btn:hover {
-    background: rgba(220, 53, 69, 0.1);
-    color: var(--error-red);
+    background: rgba(220, 53, 69, 0.2);
+    color: #bd2130;
 }
 
 .history-delete-btn:active {

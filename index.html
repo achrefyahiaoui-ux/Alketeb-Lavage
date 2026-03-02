@@ -108,7 +108,7 @@
             <!-- Submit Button -->
             <div class="submit-section">
                 <button id="btnValider" class="submit-btn" disabled>
-                    <span class="btn-text">Valider</span>
+                    <span class="btn-text">واصل</span>
                     <span class="btn-loader hidden">
                         <svg class="spinner" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                             <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" fill="none" stroke-dasharray="32" stroke-linecap="round"/>
@@ -128,7 +128,7 @@
                             <path d="M8 16H3v5"></path>
                         </svg>
                     </span>
-                    <span class="btn-text">Recommencer</span>
+                    <span class="btn-text">إعادة المحاولة</span>
                 </button>
             </div>
 
@@ -181,7 +181,7 @@
                     <svg class="loading-spinner" viewBox="0 0 50 50" xmlns="http://www.w3.org/2000/svg">
                         <circle cx="25" cy="25" r="20" stroke="currentColor" stroke-width="4" fill="none" stroke-dasharray="80" stroke-linecap="round"/>
                     </svg>
-                    <p class="loading-text">Traitement en cours, Veuillez patienter...</p>
+                    <p class="loading-text">...جارٍ المعالجة، يُرجى الانتظار</p>
                 </div>
             </div>
 
@@ -189,23 +189,81 @@
             <div id="resultsSection" class="results-section hidden">
                 <!-- Success Results -->
                 <div id="successResults" class="success-results hidden">
-                    <h2 class="results-title">Résultat</h2>
+                    <h2 class="results-title">النتيجة</h2>
                     <div class="results-table">
-                        <div class="result-row">
-                            <span class="result-label">Catégorie:</span>
-                            <span id="resultCategorie" class="result-value"></span>
+                        <!-- Categorie Row -->
+                        <div class="result-row" data-field="categorie">
+                            <div class="result-row-header">
+                                <span class="result-label">الفئة:</span>
+                                <span id="resultCategorie" class="result-value"></span>
+                            </div>
+                            <div class="validation-buttons">
+                                <button class="validate-btn correct-btn" data-action="correct">صحيح</button>
+                                <button class="validate-btn wrong-btn" data-action="wrong">خاطئ</button>
+                            </div>
+                            <div id="categorieDropdown" class="correction-input hidden">
+                                <select id="categorieSelect" class="correction-select">
+                                    <option value="">اختر الفئة...</option>
+                                </select>
+                            </div>
                         </div>
-                        <div class="result-row">
-                            <span class="result-label">Type de lavage:</span>
-                            <span id="resultLavageType" class="result-value"></span>
+                        <!-- Prix Row -->
+                        <div class="result-row" data-field="prix">
+                            <div class="result-row-header">
+                                <span class="result-label">السعر:</span>
+                                <span id="resultPrix" class="result-value"></span>
+                            </div>
+                            <div class="validation-buttons">
+                                <button class="validate-btn correct-btn" data-action="correct">صحيح</button>
+                                <button class="validate-btn wrong-btn" data-action="wrong">خاطئ</button>
+                            </div>
+                            <div id="prixInput" class="correction-input hidden">
+                                <input type="number" id="prixCorrection" class="correction-textbox" placeholder="أدخل السعر الصحيح">
+                            </div>
                         </div>
-                        <div class="result-row">
-                            <span class="result-label">Plaque:</span>
-                            <span id="resultPlate" class="result-value"></span>
+                        <!-- Type de Lavage Row -->
+                        <div class="result-row" data-field="lavagetype">
+                            <div class="result-row-header">
+                                <span class="result-label">نوع الغسيل:</span>
+                                <span id="resultLavageType" class="result-value"></span>
+                            </div>
+                            <div class="validation-buttons">
+                                <button class="validate-btn correct-btn" data-action="correct">صحيح</button>
+                                <button class="validate-btn wrong-btn" data-action="wrong">خاطئ</button>
+                            </div>
                         </div>
-                        <div class="result-row">
-                            <span class="result-label">Prix:</span>
-                            <span id="resultPrix" class="result-value"></span>
+                        <!-- Matricule Row -->
+                        <div class="result-row" data-field="matricule">
+                            <div class="result-row-header">
+                                <span class="result-label">اللوحة:</span>
+                                <span id="resultPlate" class="result-value"></span>
+                            </div>
+                            <div class="validation-buttons">
+                                <button class="validate-btn correct-btn" data-action="correct">صحيح</button>
+                                <button class="validate-btn wrong-btn" data-action="wrong">خاطئ</button>
+                            </div>
+                        </div>
+                        <!-- Marque Row -->
+                        <div class="result-row" data-field="marque">
+                            <div class="result-row-header">
+                                <span class="result-label">الماركة:</span>
+                                <span id="resultMarque" class="result-value"></span>
+                            </div>
+                            <div class="validation-buttons">
+                                <button class="validate-btn correct-btn" data-action="correct">صحيح</button>
+                                <button class="validate-btn wrong-btn" data-action="wrong">خاطئ</button>
+                            </div>
+                        </div>
+                        <!-- Model Row -->
+                        <div class="result-row" data-field="model">
+                            <div class="result-row-header">
+                                <span class="result-label">الموديل:</span>
+                                <span id="resultModel" class="result-value"></span>
+                            </div>
+                            <div class="validation-buttons">
+                                <button class="validate-btn correct-btn" data-action="correct">صحيح</button>
+                                <button class="validate-btn wrong-btn" data-action="wrong">خاطئ</button>
+                            </div>
                         </div>
                     </div>
                     <div class="results-buttons">
@@ -215,7 +273,7 @@
                                     <polyline points="20 6 9 17 4 12"></polyline>
                                 </svg>
                             </span>
-                            <span class="btn-text">Approuver</span>
+                            <span class="btn-text">واصل</span>
                         </button>
                         <button id="btnRecommencerResults" class="restart-btn">
                             <span class="btn-icon">
@@ -226,7 +284,7 @@
                                     <path d="M8 16H3v5"></path>
                                 </svg>
                             </span>
-                            <span class="btn-text">Recommencer</span>
+                            <span class="btn-text">إعادة المحاولة</span>
                         </button>
                     </div>
                 </div>
@@ -250,7 +308,7 @@
                                 <path d="M8 16H3v5"></path>
                             </svg>
                         </span>
-                        <span class="btn-text">Recommencer</span>
+                        <span class="btn-text">إعادة المحاولة</span>
                     </button>
                 </div>
             </div>

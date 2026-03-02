@@ -7,6 +7,7 @@
 const WEBHOOK_URL = 'https://n8n.srv987649.hstgr.cloud/webhook/Lavage';
 const WEBHOOK_VALIDER = 'https://n8n.srv987649.hstgr.cloud/webhook/Valider';
 const WEBHOOK_TRASH = 'https://n8n.srv987649.hstgr.cloud/webhook/Trash';
+const WEBHOOK_CATEGORIES = 'https://n8n.srv987649.hstgr.cloud/webhook/CarCategory';
 
 // App State
 const state = {
@@ -21,7 +22,16 @@ const state = {
         exterieur: false,
         interieur: false,
         cire: false
-    }
+    },
+    fieldValidations: {
+        categorie: null, // null = not validated, 'correct' or 'wrong'
+        prix: null,
+        lavagetype: null,
+        matricule: null,
+        marque: null,
+        model: null
+    },
+    categories: [] // Categories loaded from webhook
 };
 
 // DOM Elements
@@ -67,10 +77,18 @@ const elements = {
     resultLavageType: document.getElementById('resultLavageType'),
     resultPlate: document.getElementById('resultPlate'),
     resultPrix: document.getElementById('resultPrix'),
+    resultMarque: document.getElementById('resultMarque'),
+    resultModel: document.getElementById('resultModel'),
     errorMessage: document.getElementById('errorMessage'),
     btnApprouver: document.getElementById('btnApprouver'),
     btnRecommencerResults: document.getElementById('btnRecommencerResults'),
     btnRecommencerError: document.getElementById('btnRecommencerError'),
+
+    // Correction elements
+    categorieDropdown: document.getElementById('categorieDropdown'),
+    categorieSelect: document.getElementById('categorieSelect'),
+    prixInput: document.getElementById('prixInput'),
+    prixCorrection: document.getElementById('prixCorrection'),
 
     // History elements
     historySearch: document.getElementById('historySearch'),
@@ -421,16 +439,160 @@ function showLoading(show) {
 function showSuccessResults(data) {
     state.currentResult = data;
 
+    // Reset field validations
+    state.fieldValidations = {
+        categorie: null,
+        prix: null,
+        lavagetype: null,
+        matricule: null,
+        marque: null,
+        model: null
+    };
+
     // Populate results table
     elements.resultCategorie.textContent = data.Categorie || '-';
-    elements.resultLavageType.textContent = data.LavageType || '-';
-    elements.resultPlate.textContent = data.Plate || '-';
+    elements.resultLavageType.textContent = data['Type De Lavage'] || data.LavageType || '-';
+    elements.resultPlate.textContent = data.Matricule || data.Plate || '-';
     elements.resultPrix.textContent = data.Prix ? `${data.Prix} DT` : '-';
+    elements.resultMarque.textContent = data.Marque || '-';
+    elements.resultModel.textContent = data.Model || '-';
+
+    // Reset validation buttons
+    resetValidationButtons();
+
+    // Hide correction inputs
+    elements.categorieDropdown.classList.add('hidden');
+    elements.prixInput.classList.add('hidden');
+
+    // Setup validation button listeners
+    setupValidationButtons();
 
     // Show success results, hide error
     elements.errorResults.classList.add('hidden');
     elements.successResults.classList.remove('hidden');
     elements.resultsSection.classList.remove('hidden');
+}
+
+/**
+ * Reset all validation buttons to default state
+ */
+function resetValidationButtons() {
+    const allButtons = document.querySelectorAll('.validate-btn');
+    allButtons.forEach(btn => btn.classList.remove('active'));
+}
+
+/**
+ * Setup validation button event listeners
+ */
+function setupValidationButtons() {
+    const resultRows = document.querySelectorAll('.result-row[data-field]');
+
+    resultRows.forEach(row => {
+        const field = row.dataset.field;
+        const correctBtn = row.querySelector('.correct-btn');
+        const wrongBtn = row.querySelector('.wrong-btn');
+
+        // Remove old listeners by cloning
+        const newCorrectBtn = correctBtn.cloneNode(true);
+        const newWrongBtn = wrongBtn.cloneNode(true);
+        correctBtn.parentNode.replaceChild(newCorrectBtn, correctBtn);
+        wrongBtn.parentNode.replaceChild(newWrongBtn, wrongBtn);
+
+        // Add new listeners
+        newCorrectBtn.addEventListener('click', () => handleValidation(field, 'correct', row));
+        newWrongBtn.addEventListener('click', () => handleValidation(field, 'wrong', row));
+    });
+}
+
+/**
+ * Handle validation button click
+ * @param {string} field - Field name
+ * @param {string} action - 'correct' or 'wrong'
+ * @param {HTMLElement} row - Row element
+ */
+function handleValidation(field, action, row) {
+    const correctBtn = row.querySelector('.correct-btn');
+    const wrongBtn = row.querySelector('.wrong-btn');
+
+    // Reset both buttons
+    correctBtn.classList.remove('active');
+    wrongBtn.classList.remove('active');
+
+    // Set the clicked one as active
+    if (action === 'correct') {
+        correctBtn.classList.add('active');
+        state.fieldValidations[field] = 'correct';
+
+        // Hide correction inputs if showing
+        if (field === 'categorie') {
+            elements.categorieDropdown.classList.add('hidden');
+        } else if (field === 'prix') {
+            elements.prixInput.classList.add('hidden');
+        }
+    } else {
+        wrongBtn.classList.add('active');
+        state.fieldValidations[field] = 'wrong';
+
+        // Show appropriate correction input
+        if (field === 'categorie') {
+            elements.categorieDropdown.classList.remove('hidden');
+            // Fetch categories if not loaded
+            if (state.categories.length === 0) {
+                fetchCategories();
+            }
+        } else if (field === 'prix') {
+            elements.prixInput.classList.remove('hidden');
+            elements.prixCorrection.focus();
+        }
+    }
+}
+
+/**
+ * Fetch categories from webhook
+ */
+async function fetchCategories() {
+    try {
+        const response = await fetch(WEBHOOK_CATEGORIES, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ action: 'fetch' })
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            state.categories = Array.isArray(data) ? data : (data.categories || []);
+            populateCategoriesDropdown();
+        }
+    } catch (error) {
+        console.error('Error fetching categories:', error);
+    }
+}
+
+/**
+ * Populate categories dropdown
+ */
+function populateCategoriesDropdown() {
+    const select = elements.categorieSelect;
+
+    // Clear existing options except first
+    select.innerHTML = '<option value="">اختر الفئة...</option>';
+
+    // Add categories
+    state.categories.forEach(category => {
+        const option = document.createElement('option');
+        // Handle both string and object formats
+        if (typeof category === 'string') {
+            option.value = category;
+            option.textContent = category;
+        } else if (category.name || category.Categorie) {
+            const catName = category.name || category.Categorie;
+            option.value = catName;
+            option.textContent = catName;
+        }
+        select.appendChild(option);
+    });
 }
 
 /**
@@ -455,6 +617,20 @@ function goBackToMain() {
     elements.successResults.classList.add('hidden');
     elements.errorResults.classList.add('hidden');
 
+    // Reset validation states
+    state.fieldValidations = {
+        categorie: null,
+        prix: null,
+        lavagetype: null,
+        matricule: null,
+        marque: null,
+        model: null
+    };
+
+    // Clear correction inputs
+    elements.categorieSelect.value = '';
+    elements.prixCorrection.value = '';
+
     // Reset app state
     resetApp();
 }
@@ -465,11 +641,28 @@ function goBackToMain() {
 async function approveResult() {
     if (!state.currentResult) return;
 
+    // Build the result with corrections
+    const resultToSend = { ...state.currentResult };
+
+    // Include field validation states
+    resultToSend.fieldValidations = { ...state.fieldValidations };
+
+    // Apply corrections if fields were marked as wrong
+    if (state.fieldValidations.categorie === 'wrong' && elements.categorieSelect.value) {
+        resultToSend.Categorie = elements.categorieSelect.value;
+        resultToSend.CategorieCorrection = true;
+    }
+
+    if (state.fieldValidations.prix === 'wrong' && elements.prixCorrection.value) {
+        resultToSend.Prix = elements.prixCorrection.value;
+        resultToSend.PrixCorrection = true;
+    }
+
     // Show loading
     showLoading(true);
 
     try {
-        const result = await sendToWebhook(WEBHOOK_VALIDER, state.currentResult);
+        const result = await sendToWebhook(WEBHOOK_VALIDER, resultToSend);
 
         showLoading(false);
 
@@ -477,17 +670,20 @@ async function approveResult() {
             // Hide results and show success
             elements.resultsSection.classList.add('hidden');
             elements.successResults.classList.add('hidden');
-            showStatus('Validation approuvée avec succès!', 'success');
+            showStatus('تمت الموافقة بنجاح!', 'success');
             resetApp();
+            // Clear correction inputs
+            elements.categorieSelect.value = '';
+            elements.prixCorrection.value = '';
             // Refresh history
             fetchHistory();
         } else {
-            showStatus('Erreur lors de la validation. Veuillez réessayer.', 'error');
+            showStatus('خطأ أثناء التحقق. يرجى المحاولة مرة أخرى.', 'error');
         }
     } catch (error) {
         console.error('Approval error:', error);
         showLoading(false);
-        showStatus('Erreur de connexion. Veuillez réessayer.', 'error');
+        showStatus('خطأ في الاتصال. يرجى المحاولة مرة أخرى.', 'error');
     }
 }
 
