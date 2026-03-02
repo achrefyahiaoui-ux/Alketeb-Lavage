@@ -31,7 +31,12 @@ const state = {
         marque: null,
         model: null
     },
-    categories: [] // Categories loaded from webhook
+    categories: [], // Categories loaded from webhook
+    correctedWashOptions: {
+        exterieur: false,
+        interieur: false,
+        cire: false
+    }
 };
 
 // DOM Elements
@@ -89,6 +94,10 @@ const elements = {
     categorieSelect: document.getElementById('categorieSelect'),
     prixInput: document.getElementById('prixInput'),
     prixCorrection: document.getElementById('prixCorrection'),
+    lavageTypeInput: document.getElementById('lavageTypeInput'),
+    correctionExterieur: document.getElementById('correctionExterieur'),
+    correctionInterieur: document.getElementById('correctionInterieur'),
+    correctionCire: document.getElementById('correctionCire'),
 
     // History elements
     historySearch: document.getElementById('historySearch'),
@@ -463,9 +472,17 @@ function showSuccessResults(data) {
     // Hide correction inputs
     elements.categorieDropdown.classList.add('hidden');
     elements.prixInput.classList.add('hidden');
+    elements.lavageTypeInput.classList.add('hidden');
+
+    // Reset corrected wash options
+    state.correctedWashOptions = { exterieur: false, interieur: false, cire: false };
+    resetWashCorrectionButtons();
 
     // Setup validation button listeners
     setupValidationButtons();
+
+    // Setup wash correction button listeners
+    setupWashCorrectionButtons();
 
     // Show success results, hide error
     elements.errorResults.classList.add('hidden');
@@ -528,6 +545,8 @@ function handleValidation(field, action, row) {
             elements.categorieDropdown.classList.add('hidden');
         } else if (field === 'prix') {
             elements.prixInput.classList.add('hidden');
+        } else if (field === 'lavagetype') {
+            elements.lavageTypeInput.classList.add('hidden');
         }
     } else {
         wrongBtn.classList.add('active');
@@ -543,6 +562,8 @@ function handleValidation(field, action, row) {
         } else if (field === 'prix') {
             elements.prixInput.classList.remove('hidden');
             elements.prixCorrection.focus();
+        } else if (field === 'lavagetype') {
+            elements.lavageTypeInput.classList.remove('hidden');
         }
     }
 }
@@ -596,6 +617,57 @@ function populateCategoriesDropdown() {
 }
 
 /**
+ * Reset wash correction buttons to default state
+ */
+function resetWashCorrectionButtons() {
+    elements.correctionExterieur.classList.remove('active');
+    elements.correctionInterieur.classList.remove('active');
+    elements.correctionCire.classList.remove('active');
+}
+
+/**
+ * Setup wash correction button event listeners
+ */
+function setupWashCorrectionButtons() {
+    elements.correctionExterieur.addEventListener('click', () => toggleWashCorrection('exterieur'));
+    elements.correctionInterieur.addEventListener('click', () => toggleWashCorrection('interieur'));
+    elements.correctionCire.addEventListener('click', () => toggleWashCorrection('cire'));
+}
+
+/**
+ * Toggle wash correction option
+ * @param {string} option - 'exterieur', 'interieur', or 'cire'
+ */
+function toggleWashCorrection(option) {
+    state.correctedWashOptions[option] = !state.correctedWashOptions[option];
+
+    const buttonMap = {
+        exterieur: elements.correctionExterieur,
+        interieur: elements.correctionInterieur,
+        cire: elements.correctionCire
+    };
+
+    const button = buttonMap[option];
+    if (state.correctedWashOptions[option]) {
+        button.classList.add('active');
+    } else {
+        button.classList.remove('active');
+    }
+}
+
+/**
+ * Get corrected wash options as a comma-separated string
+ * @returns {string} Selected wash options
+ */
+function getCorrectedWashOptions() {
+    const options = [];
+    if (state.correctedWashOptions.exterieur) options.push('غسيل خارجي');
+    if (state.correctedWashOptions.interieur) options.push('غسيل داخلي');
+    if (state.correctedWashOptions.cire) options.push('شمع');
+    return options.join(', ');
+}
+
+/**
  * Show error results with message
  * @param {string} message - Error message
  */
@@ -631,6 +703,10 @@ function goBackToMain() {
     elements.categorieSelect.value = '';
     elements.prixCorrection.value = '';
 
+    // Reset corrected wash options
+    state.correctedWashOptions = { exterieur: false, interieur: false, cire: false };
+    resetWashCorrectionButtons();
+
     // Reset app state
     resetApp();
 }
@@ -658,6 +734,15 @@ async function approveResult() {
         resultToSend.PrixCorrection = true;
     }
 
+    if (state.fieldValidations.lavagetype === 'wrong') {
+        const correctedWash = getCorrectedWashOptions();
+        if (correctedWash) {
+            resultToSend['Type De Lavage'] = correctedWash;
+            resultToSend.LavageTypeCorrection = true;
+            resultToSend.correctedWashOptions = { ...state.correctedWashOptions };
+        }
+    }
+
     // Show loading
     showLoading(true);
 
@@ -675,6 +760,9 @@ async function approveResult() {
             // Clear correction inputs
             elements.categorieSelect.value = '';
             elements.prixCorrection.value = '';
+            // Reset corrected wash options
+            state.correctedWashOptions = { exterieur: false, interieur: false, cire: false };
+            resetWashCorrectionButtons();
             // Refresh history
             fetchHistory();
         } else {
