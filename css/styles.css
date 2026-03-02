@@ -1033,6 +1033,37 @@ html, body {
     color: #333;
 }
 
+.history-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: 12px;
+    flex-shrink: 0;
+}
+
+.history-complete-btn {
+    width: 40px;
+    height: 40px;
+    background: transparent;
+    border: none;
+    border-radius: 50%;
+    color: var(--success-green);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition);
+}
+
+.history-complete-btn:hover {
+    background: rgba(40, 167, 69, 0.2);
+    color: #1e7e34;
+}
+
+.history-complete-btn:active {
+    transform: scale(0.9);
+}
+
 .history-delete-btn {
     width: 40px;
     height: 40px;
@@ -1045,8 +1076,6 @@ html, body {
     align-items: center;
     justify-content: center;
     transition: var(--transition);
-    margin-left: 12px;
-    flex-shrink: 0;
 }
 
 .history-delete-btn:hover {
