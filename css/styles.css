@@ -1,4 +1,4 @@
-/* Alketeb Lavage - Car Wash App Styles */
+/* Oceana Car Wash - App Styles */
 
 /* Reset and Base */
 *, *::before, *::after {
@@ -60,6 +60,19 @@ html, body {
 .login-icon {
     color: var(--primary-blue);
     margin-bottom: 16px;
+}
+
+.login-logo {
+    width: 120px;
+    height: auto;
+    margin-bottom: 16px;
+    object-fit: contain;
+}
+
+.header-logo {
+    width: 50px;
+    height: auto;
+    object-fit: contain;
 }
 
 .login-title {

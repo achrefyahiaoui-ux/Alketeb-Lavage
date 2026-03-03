@@ -1,7 +1,7 @@
 {
-  "name": "alketeb-lavage",
+  "name": "oceana-carwash",
   "version": "1.0.0",
-  "description": "Car wash photo capture app with n8n webhook integration",
+  "description": "Oceana Car Wash - photo capture app with n8n webhook integration",
   "main": "index.html",
   "scripts": {
     "start": "npx serve .",

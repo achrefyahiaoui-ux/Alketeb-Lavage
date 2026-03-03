@@ -1,5 +1,5 @@
 /**
- * Alketeb Lavage - Car Wash Photo Capture App
+ * Oceana Car Wash - Photo Capture App
  * Captures vehicle and license plate photos and sends to n8n webhooks
  */
 
