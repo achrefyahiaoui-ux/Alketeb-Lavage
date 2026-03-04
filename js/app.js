@@ -808,16 +808,29 @@ async function submitPhotos() {
         // Hide loading
         showLoading(false);
 
-        // Handle response
-        if (result.success && result.data) {
-            // Check if response is an array with data (success case)
-            if (Array.isArray(result.data) && result.data.length > 0 && result.data[0].Categorie) {
-                showSuccessResults(result.data[0]);
-            } else if (typeof result.data === 'string') {
-                // Error message from webhook
-                showErrorResults(result.data);
+        // Handle response based on customer type
+        if (result.success) {
+            if (state.customerType === 'corporate') {
+                // Corporate: skip validation step, show success and reset
+                showStatus('تم الإرسال بنجاح!', 'success');
+                resetApp();
+                // Refresh history
+                fetchHistory();
             } else {
-                showErrorResults('Réponse inattendue du serveur.');
+                // Personal: show validation results
+                if (result.data) {
+                    // Check if response is an array with data (success case)
+                    if (Array.isArray(result.data) && result.data.length > 0 && result.data[0].Categorie) {
+                        showSuccessResults(result.data[0]);
+                    } else if (typeof result.data === 'string') {
+                        // Error message from webhook
+                        showErrorResults(result.data);
+                    } else {
+                        showErrorResults('Réponse inattendue du serveur.');
+                    }
+                } else {
+                    showErrorResults('Réponse inattendue du serveur.');
+                }
             }
         } else {
             showErrorResults('Erreur de connexion. Veuillez réessayer.');
