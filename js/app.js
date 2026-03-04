@@ -21,7 +21,10 @@ const state = {
     // Customer type state
     customerType: 'personal', // 'personal' or 'corporate'
     phoneNumber: '',
-    corporatePlates: [], // Plates loaded from webhook
+    corporatePlates: [], // Plates loaded from webhook for corporate
+    corporatePlatesLoaded: false, // Flag to track if corporate plates are loaded
+    personalPlates: [], // Plates loaded from webhook for personal customers
+    personalPlatesLoaded: false, // Flag to track if personal plates are loaded
     selectedPlate: null,
     personalSelectedPlate: null, // Selected plate for personal customers
     // Photo state
@@ -178,19 +181,11 @@ function init() {
     elements.btnCorporate.addEventListener('click', () => setCustomerType('corporate'));
     elements.phoneNumber.addEventListener('input', handlePhoneInput);
     elements.platesSearch.addEventListener('input', handlePlatesSearch);
-    elements.platesSearch.addEventListener('focus', () => {
-        if (elements.platesSearch.value.trim()) {
-            elements.platesSearchResults.classList.remove('hidden');
-        }
-    });
+    elements.platesSearch.addEventListener('focus', handleCorporatePlatesFocus);
     elements.clearSelectedPlate.addEventListener('click', clearPlateSelection);
     // Personal plates search event listeners
     elements.personalPlatesSearch.addEventListener('input', handlePersonalPlatesSearch);
-    elements.personalPlatesSearch.addEventListener('focus', () => {
-        if (elements.personalPlatesSearch.value.trim()) {
-            elements.personalPlatesSearchResults.classList.remove('hidden');
-        }
-    });
+    elements.personalPlatesSearch.addEventListener('focus', handlePersonalPlatesFocus);
     elements.clearPersonalSelectedPlate.addEventListener('click', clearPersonalPlateSelection);
     // Close search results when clicking outside
     document.addEventListener('click', (e) => {
@@ -444,43 +439,23 @@ function handlePhoneInput() {
 }
 
 /**
- * Debounce timer for search
+ * Handle corporate plates focus - load all plates if not loaded
  */
-let searchTimeout = null;
-
-/**
- * Handle plates search input
- */
-function handlePlatesSearch() {
-    const searchTerm = elements.platesSearch.value.trim();
-
-    // Clear previous timeout
-    if (searchTimeout) {
-        clearTimeout(searchTimeout);
+async function handleCorporatePlatesFocus() {
+    if (!state.corporatePlatesLoaded) {
+        // Show loading
+        elements.platesSearchResults.innerHTML = '<div class="plates-search-item loading">جارٍ التحميل...</div>';
+        elements.platesSearchResults.classList.remove('hidden');
+        await loadCorporatePlates();
     }
-
-    // Hide results if empty
-    if (!searchTerm) {
-        elements.platesSearchResults.classList.add('hidden');
-        elements.platesSearchResults.innerHTML = '';
-        return;
-    }
-
-    // Show loading
-    elements.platesSearchResults.innerHTML = '<div class="plates-search-item loading">جارٍ البحث...</div>';
-    elements.platesSearchResults.classList.remove('hidden');
-
-    // Debounce the search request
-    searchTimeout = setTimeout(() => {
-        searchPlates(searchTerm);
-    }, 300);
+    // Show all plates or filtered results
+    filterCorporatePlates();
 }
 
 /**
- * Search plates from webhook
- * @param {string} searchTerm - Search query
+ * Load all corporate plates from webhook
  */
-async function searchPlates(searchTerm) {
+async function loadCorporatePlates() {
     try {
         const response = await fetch(WEBHOOK_PLATES, {
             method: 'POST',
@@ -488,24 +463,58 @@ async function searchPlates(searchTerm) {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                action: 'search',
-                query: searchTerm,
+                action: 'fetch',
                 ...getUserInfo()
             })
         });
 
         if (response.ok) {
             const data = await response.json();
-            const plates = Array.isArray(data) ? data : (data.plates || data.data || []);
-            displaySearchResults(plates);
+            state.corporatePlates = Array.isArray(data) ? data : (data.plates || data.data || []);
+            state.corporatePlatesLoaded = true;
         } else {
-            console.error('Failed to search plates:', response.status);
-            elements.platesSearchResults.innerHTML = '<div class="plates-search-item no-results">خطأ في البحث</div>';
+            console.error('Failed to load corporate plates:', response.status);
+            state.corporatePlates = [];
         }
     } catch (error) {
-        console.error('Error searching plates:', error);
-        elements.platesSearchResults.innerHTML = '<div class="plates-search-item no-results">خطأ في الاتصال</div>';
+        console.error('Error loading corporate plates:', error);
+        state.corporatePlates = [];
     }
+}
+
+/**
+ * Handle plates search input - filter locally
+ */
+function handlePlatesSearch() {
+    filterCorporatePlates();
+}
+
+/**
+ * Filter corporate plates based on search input
+ */
+function filterCorporatePlates() {
+    const searchTerm = elements.platesSearch.value.trim().toLowerCase();
+
+    // Filter plates locally
+    let filteredPlates;
+    if (!searchTerm) {
+        // Show all plates if no search term
+        filteredPlates = state.corporatePlates;
+    } else {
+        // Filter plates that contain the search term
+        filteredPlates = state.corporatePlates.filter(plate => {
+            const plateValue = (typeof plate === 'string') ? plate :
+                (plate.Matricule || plate.plate || plate.id || '');
+            const plateName = (typeof plate === 'string') ? '' :
+                (plate.name || plate.Nom || '');
+
+            return plateValue.toLowerCase().includes(searchTerm) ||
+                   plateName.toLowerCase().includes(searchTerm);
+        });
+    }
+
+    displaySearchResults(filteredPlates);
+    elements.platesSearchResults.classList.remove('hidden');
 }
 
 /**
@@ -584,43 +593,23 @@ function clearPlateSelection() {
 }
 
 /**
- * Debounce timer for personal plates search
+ * Handle personal plates focus - load all plates if not loaded
  */
-let personalSearchTimeout = null;
-
-/**
- * Handle personal plates search input
- */
-function handlePersonalPlatesSearch() {
-    const searchTerm = elements.personalPlatesSearch.value.trim();
-
-    // Clear previous timeout
-    if (personalSearchTimeout) {
-        clearTimeout(personalSearchTimeout);
+async function handlePersonalPlatesFocus() {
+    if (!state.personalPlatesLoaded) {
+        // Show loading
+        elements.personalPlatesSearchResults.innerHTML = '<div class="plates-search-item loading">جارٍ التحميل...</div>';
+        elements.personalPlatesSearchResults.classList.remove('hidden');
+        await loadPersonalPlates();
     }
-
-    // Hide results if empty
-    if (!searchTerm) {
-        elements.personalPlatesSearchResults.classList.add('hidden');
-        elements.personalPlatesSearchResults.innerHTML = '';
-        return;
-    }
-
-    // Show loading
-    elements.personalPlatesSearchResults.innerHTML = '<div class="plates-search-item loading">جارٍ البحث...</div>';
-    elements.personalPlatesSearchResults.classList.remove('hidden');
-
-    // Debounce the search request
-    personalSearchTimeout = setTimeout(() => {
-        searchPersonalPlates(searchTerm);
-    }, 300);
+    // Show all plates or filtered results
+    filterPersonalPlates();
 }
 
 /**
- * Search personal customer plates from webhook
- * @param {string} searchTerm - Search query
+ * Load all personal plates from webhook
  */
-async function searchPersonalPlates(searchTerm) {
+async function loadPersonalPlates() {
     try {
         const response = await fetch(WEBHOOK_PLATES_CUSTOMERS, {
             method: 'POST',
@@ -628,24 +617,58 @@ async function searchPersonalPlates(searchTerm) {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                action: 'search',
-                query: searchTerm,
+                action: 'fetch',
                 ...getUserInfo()
             })
         });
 
         if (response.ok) {
             const data = await response.json();
-            const plates = Array.isArray(data) ? data : (data.plates || data.data || []);
-            displayPersonalSearchResults(plates);
+            state.personalPlates = Array.isArray(data) ? data : (data.plates || data.data || []);
+            state.personalPlatesLoaded = true;
         } else {
-            console.error('Failed to search personal plates:', response.status);
-            elements.personalPlatesSearchResults.innerHTML = '<div class="plates-search-item no-results">خطأ في البحث</div>';
+            console.error('Failed to load personal plates:', response.status);
+            state.personalPlates = [];
         }
     } catch (error) {
-        console.error('Error searching personal plates:', error);
-        elements.personalPlatesSearchResults.innerHTML = '<div class="plates-search-item no-results">خطأ في الاتصال</div>';
+        console.error('Error loading personal plates:', error);
+        state.personalPlates = [];
     }
+}
+
+/**
+ * Handle personal plates search input - filter locally
+ */
+function handlePersonalPlatesSearch() {
+    filterPersonalPlates();
+}
+
+/**
+ * Filter personal plates based on search input
+ */
+function filterPersonalPlates() {
+    const searchTerm = elements.personalPlatesSearch.value.trim().toLowerCase();
+
+    // Filter plates locally
+    let filteredPlates;
+    if (!searchTerm) {
+        // Show all plates if no search term
+        filteredPlates = state.personalPlates;
+    } else {
+        // Filter plates that contain the search term
+        filteredPlates = state.personalPlates.filter(plate => {
+            const plateValue = (typeof plate === 'string') ? plate :
+                (plate.Matricule || plate.plate || plate.id || '');
+            const plateName = (typeof plate === 'string') ? '' :
+                (plate.name || plate.Nom || '');
+
+            return plateValue.toLowerCase().includes(searchTerm) ||
+                   plateName.toLowerCase().includes(searchTerm);
+        });
+    }
+
+    displayPersonalSearchResults(filteredPlates);
+    elements.personalPlatesSearchResults.classList.remove('hidden');
 }
 
 /**
@@ -1745,6 +1768,11 @@ function resetApp() {
     state.phoneNumber = '';
     state.selectedPlate = null;
     state.personalSelectedPlate = null;
+    // Reset plates loaded flags to refresh data
+    state.corporatePlatesLoaded = false;
+    state.personalPlatesLoaded = false;
+    state.corporatePlates = [];
+    state.personalPlates = [];
     elements.btnPersonal.classList.add('active');
     elements.btnCorporate.classList.remove('active');
     elements.phoneNumber.value = '';
@@ -1794,6 +1822,11 @@ function restartApp() {
     state.phoneNumber = '';
     state.selectedPlate = null;
     state.personalSelectedPlate = null;
+    // Reset plates loaded flags to refresh data
+    state.corporatePlatesLoaded = false;
+    state.personalPlatesLoaded = false;
+    state.corporatePlates = [];
+    state.personalPlates = [];
     elements.btnPersonal.classList.add('active');
     elements.btnCorporate.classList.remove('active');
     elements.phoneNumber.value = '';
