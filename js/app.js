@@ -73,8 +73,12 @@ const elements = {
     btnCorporate: document.getElementById('btnCorporate'),
     phoneNumber: document.getElementById('phoneNumber'),
     corporatePlatesSection: document.getElementById('corporatePlatesSection'),
-    corporatePlates: document.getElementById('corporatePlates'),
-    photoSectionsContainer: document.getElementById('photoSectionsContainer'),
+    platesSearch: document.getElementById('platesSearch'),
+    platesSearchResults: document.getElementById('platesSearchResults'),
+    selectedPlateDisplay: document.getElementById('selectedPlateDisplay'),
+    selectedPlateText: document.getElementById('selectedPlateText'),
+    clearSelectedPlate: document.getElementById('clearSelectedPlate'),
+    additionalPhotoSections: document.getElementById('additionalPhotoSections'),
 
     // Photo Buttons
     btnPhotoAvant: document.getElementById('btnPhotoAvant'),
@@ -164,7 +168,19 @@ function init() {
     elements.btnPersonal.addEventListener('click', () => setCustomerType('personal'));
     elements.btnCorporate.addEventListener('click', () => setCustomerType('corporate'));
     elements.phoneNumber.addEventListener('input', handlePhoneInput);
-    elements.corporatePlates.addEventListener('change', handlePlateSelection);
+    elements.platesSearch.addEventListener('input', handlePlatesSearch);
+    elements.platesSearch.addEventListener('focus', () => {
+        if (elements.platesSearch.value.trim()) {
+            elements.platesSearchResults.classList.remove('hidden');
+        }
+    });
+    elements.clearSelectedPlate.addEventListener('click', clearPlateSelection);
+    // Close search results when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!elements.platesSearch.contains(e.target) && !elements.platesSearchResults.contains(e.target)) {
+            elements.platesSearchResults.classList.add('hidden');
+        }
+    });
 
     // Bind photo button event listeners
     elements.btnPhotoAvant.addEventListener('click', () => openCamera('avant'));
@@ -369,23 +385,22 @@ function setCustomerType(type) {
     if (type === 'personal') {
         elements.btnPersonal.classList.add('active');
         elements.btnCorporate.classList.remove('active');
-        // Hide corporate plates dropdown
+        // Hide corporate plates search
         elements.corporatePlatesSection.classList.add('hidden');
-        // Show photo sections
-        elements.photoSectionsContainer.classList.remove('hidden');
+        // Show additional photo sections (arriere + matricule)
+        elements.additionalPhotoSections.classList.remove('hidden');
         // Reset selected plate
         state.selectedPlate = null;
+        clearPlateSelection();
     } else {
         elements.btnPersonal.classList.remove('active');
         elements.btnCorporate.classList.add('active');
-        // Show corporate plates dropdown
+        // Show corporate plates search
         elements.corporatePlatesSection.classList.remove('hidden');
-        // Hide photo sections
-        elements.photoSectionsContainer.classList.add('hidden');
-        // Fetch plates if not already loaded
-        if (state.corporatePlates.length === 0) {
-            fetchCorporatePlates();
-        }
+        // Hide additional photo sections (arriere + matricule)
+        elements.additionalPhotoSections.classList.add('hidden');
+        // Focus on search input
+        elements.platesSearch.focus();
     }
 
     updateSubmitButton();
@@ -400,78 +415,143 @@ function handlePhoneInput() {
 }
 
 /**
- * Handle plate selection from dropdown
+ * Debounce timer for search
  */
-function handlePlateSelection() {
-    const selectedValue = elements.corporatePlates.value;
-    if (selectedValue) {
-        // Find the plate object from state
-        state.selectedPlate = state.corporatePlates.find(p =>
-            (p.Matricule || p.plate || p.id) === selectedValue
-        ) || { Matricule: selectedValue };
-    } else {
-        state.selectedPlate = null;
+let searchTimeout = null;
+
+/**
+ * Handle plates search input
+ */
+function handlePlatesSearch() {
+    const searchTerm = elements.platesSearch.value.trim();
+
+    // Clear previous timeout
+    if (searchTimeout) {
+        clearTimeout(searchTimeout);
     }
-    updateSubmitButton();
+
+    // Hide results if empty
+    if (!searchTerm) {
+        elements.platesSearchResults.classList.add('hidden');
+        elements.platesSearchResults.innerHTML = '';
+        return;
+    }
+
+    // Show loading
+    elements.platesSearchResults.innerHTML = '<div class="plates-search-item loading">جارٍ البحث...</div>';
+    elements.platesSearchResults.classList.remove('hidden');
+
+    // Debounce the search request
+    searchTimeout = setTimeout(() => {
+        searchPlates(searchTerm);
+    }, 300);
 }
 
 /**
- * Fetch corporate plates from webhook
+ * Search plates from webhook
+ * @param {string} searchTerm - Search query
  */
-async function fetchCorporatePlates() {
-    // Show loading state in dropdown
-    elements.corporatePlates.innerHTML = '<option value="">جارٍ التحميل...</option>';
-    elements.corporatePlates.disabled = true;
-
+async function searchPlates(searchTerm) {
     try {
         const response = await fetch(WEBHOOK_PLATES, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ action: 'fetch', ...getUserInfo() })
+            body: JSON.stringify({
+                action: 'search',
+                query: searchTerm,
+                ...getUserInfo()
+            })
         });
 
         if (response.ok) {
             const data = await response.json();
-            state.corporatePlates = Array.isArray(data) ? data : (data.plates || data.data || []);
-            populatePlatesDropdown();
+            const plates = Array.isArray(data) ? data : (data.plates || data.data || []);
+            displaySearchResults(plates);
         } else {
-            console.error('Failed to fetch plates:', response.status);
-            elements.corporatePlates.innerHTML = '<option value="">فشل في تحميل اللوحات</option>';
+            console.error('Failed to search plates:', response.status);
+            elements.platesSearchResults.innerHTML = '<div class="plates-search-item no-results">خطأ في البحث</div>';
         }
     } catch (error) {
-        console.error('Error fetching plates:', error);
-        elements.corporatePlates.innerHTML = '<option value="">خطأ في الاتصال</option>';
-    } finally {
-        elements.corporatePlates.disabled = false;
+        console.error('Error searching plates:', error);
+        elements.platesSearchResults.innerHTML = '<div class="plates-search-item no-results">خطأ في الاتصال</div>';
     }
 }
 
 /**
- * Populate plates dropdown with fetched data
+ * Display search results
+ * @param {Array} plates - Array of plate objects
  */
-function populatePlatesDropdown() {
-    const select = elements.corporatePlates;
+function displaySearchResults(plates) {
+    if (!plates || plates.length === 0) {
+        elements.platesSearchResults.innerHTML = '<div class="plates-search-item no-results">لا توجد نتائج</div>';
+        return;
+    }
 
-    // Clear and add placeholder
-    select.innerHTML = '<option value="">اختر اللوحة...</option>';
+    elements.platesSearchResults.innerHTML = '';
 
-    // Add plates
-    state.corporatePlates.forEach(plate => {
-        const option = document.createElement('option');
+    plates.forEach(plate => {
+        const item = document.createElement('div');
+        item.className = 'plates-search-item';
+
         // Handle various data formats
+        let plateValue, displayText;
         if (typeof plate === 'string') {
-            option.value = plate;
-            option.textContent = plate;
+            plateValue = plate;
+            displayText = plate;
         } else {
-            const plateValue = plate.Matricule || plate.plate || plate.id || '';
-            const plateName = plate.name || plate.Nom || plateValue;
-            option.value = plateValue;
-            option.textContent = plateName + (plateValue !== plateName ? ` (${plateValue})` : '');
+            plateValue = plate.Matricule || plate.plate || plate.id || '';
+            const plateName = plate.name || plate.Nom || '';
+            displayText = plateName ? `${plateName} (${plateValue})` : plateValue;
         }
-        select.appendChild(option);
+
+        item.textContent = displayText;
+        item.dataset.value = plateValue;
+        item.dataset.plate = JSON.stringify(plate);
+
+        item.addEventListener('click', () => selectPlate(plate));
+
+        elements.platesSearchResults.appendChild(item);
     });
+}
+
+/**
+ * Select a plate from search results
+ * @param {Object|string} plate - Selected plate
+ */
+function selectPlate(plate) {
+    // Store selected plate
+    if (typeof plate === 'string') {
+        state.selectedPlate = { Matricule: plate };
+    } else {
+        state.selectedPlate = plate;
+    }
+
+    // Get display text
+    const plateValue = state.selectedPlate.Matricule || state.selectedPlate.plate || state.selectedPlate.id || '';
+    const plateName = state.selectedPlate.name || state.selectedPlate.Nom || '';
+    const displayText = plateName ? `${plateName} (${plateValue})` : plateValue;
+
+    // Update UI
+    elements.selectedPlateText.textContent = displayText;
+    elements.selectedPlateDisplay.classList.remove('hidden');
+    elements.platesSearch.value = '';
+    elements.platesSearchResults.classList.add('hidden');
+
+    updateSubmitButton();
+}
+
+/**
+ * Clear plate selection
+ */
+function clearPlateSelection() {
+    state.selectedPlate = null;
+    elements.selectedPlateText.textContent = '';
+    elements.selectedPlateDisplay.classList.add('hidden');
+    elements.platesSearch.value = '';
+    elements.platesSearchResults.classList.add('hidden');
+    updateSubmitButton();
 }
 
 /**
@@ -620,15 +700,16 @@ function retakePhoto(type) {
  */
 function updateSubmitButton() {
     const hasWashOption = state.washOptions.exterieur || state.washOptions.interieur || state.washOptions.cire;
+    const hasPhotoAvant = state.photoAvant !== null;
 
     if (state.customerType === 'personal') {
         // Personal: needs all photos + wash option
-        const hasAllPhotos = state.photoAvant && state.photoArriere && state.photoMatricule;
+        const hasAllPhotos = hasPhotoAvant && state.photoArriere && state.photoMatricule;
         elements.btnValider.disabled = !(hasAllPhotos && hasWashOption);
     } else {
-        // Corporate: needs selected plate + wash option
+        // Corporate: needs front photo + selected plate + wash option
         const hasSelectedPlate = state.selectedPlate !== null;
-        elements.btnValider.disabled = !(hasSelectedPlate && hasWashOption);
+        elements.btnValider.disabled = !(hasPhotoAvant && hasSelectedPlate && hasWashOption);
     }
 }
 
@@ -681,6 +762,11 @@ async function submitPhotos() {
             return;
         }
     } else {
+        // Corporate mode: needs front photo + selected plate
+        if (!state.photoAvant) {
+            showStatus('الرجاء التقاط صورة السيارة', 'error');
+            return;
+        }
         if (!state.selectedPlate) {
             showStatus('الرجاء اختيار اللوحة', 'error');
             return;
@@ -705,12 +791,13 @@ async function submitPhotos() {
         };
 
         if (state.customerType === 'personal') {
-            // Personal customer: include photos
+            // Personal customer: include all photos
             payload.imageAvant = state.photoAvant;
             payload.imageArriere = state.photoArriere;
             payload.imageMatricule = state.photoMatricule;
         } else {
-            // Corporate customer: include selected plate data
+            // Corporate customer: include front photo + selected plate data
+            payload.imageAvant = state.photoAvant;
             payload.selectedPlate = state.selectedPlate;
             payload.Matricule = state.selectedPlate.Matricule || state.selectedPlate.plate || '';
         }
@@ -1449,10 +1536,12 @@ function resetApp() {
     elements.btnCorporate.classList.remove('active');
     elements.phoneNumber.value = '';
     elements.corporatePlatesSection.classList.add('hidden');
-    elements.photoSectionsContainer.classList.remove('hidden');
-    if (elements.corporatePlates) {
-        elements.corporatePlates.value = '';
-    }
+    elements.additionalPhotoSections.classList.remove('hidden');
+    // Reset search UI
+    elements.platesSearch.value = '';
+    elements.platesSearchResults.classList.add('hidden');
+    elements.selectedPlateDisplay.classList.add('hidden');
+    elements.selectedPlateText.textContent = '';
 
     // Clear photos
     state.photoAvant = null;
@@ -1489,10 +1578,12 @@ function restartApp() {
     elements.btnCorporate.classList.remove('active');
     elements.phoneNumber.value = '';
     elements.corporatePlatesSection.classList.add('hidden');
-    elements.photoSectionsContainer.classList.remove('hidden');
-    if (elements.corporatePlates) {
-        elements.corporatePlates.value = '';
-    }
+    elements.additionalPhotoSections.classList.remove('hidden');
+    // Reset search UI
+    elements.platesSearch.value = '';
+    elements.platesSearchResults.classList.add('hidden');
+    elements.selectedPlateDisplay.classList.add('hidden');
+    elements.selectedPlateText.textContent = '';
 
     // Clear photos
     state.photoAvant = null;

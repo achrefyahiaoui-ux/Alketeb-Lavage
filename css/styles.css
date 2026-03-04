@@ -408,7 +408,7 @@ html, body {
     margin-bottom: 15px;
 }
 
-.plates-dropdown-group {
+.plates-search-group {
     display: flex;
     flex-direction: column;
     gap: 8px;
@@ -422,7 +422,12 @@ html, body {
     direction: rtl;
 }
 
-.plates-dropdown {
+.plates-search-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+.plates-search-input {
     width: 100%;
     padding: 14px 18px;
     font-size: 1.1rem;
@@ -434,35 +439,110 @@ html, body {
     box-shadow: var(--shadow-light);
     transition: var(--transition);
     direction: rtl;
-    cursor: pointer;
-    appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: left 16px center;
-    background-size: 20px;
-    padding-left: 50px;
+    text-align: right;
 }
 
-.plates-dropdown:focus {
+.plates-search-input:focus {
     outline: none;
     border-color: var(--primary-blue);
     box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.3);
 }
 
-.plates-dropdown option {
-    padding: 12px;
-    direction: rtl;
+.plates-search-input::placeholder {
+    color: #999;
 }
 
-/* Photo Sections Container */
-#photoSectionsContainer {
+.plates-search-results {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--white);
+    border: 2px solid var(--primary-blue);
+    border-top: none;
+    border-radius: 0 0 var(--border-radius) var(--border-radius);
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 100;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.plates-search-item {
+    padding: 12px 16px;
+    cursor: pointer;
+    direction: rtl;
+    text-align: right;
+    color: #333;
+    font-weight: 500;
+    border-bottom: 1px solid #eee;
+    transition: background 0.2s ease;
+}
+
+.plates-search-item:last-child {
+    border-bottom: none;
+}
+
+.plates-search-item:hover {
+    background: rgba(0, 102, 204, 0.1);
+}
+
+.plates-search-item.loading,
+.plates-search-item.no-results {
+    color: #999;
+    font-style: italic;
+    cursor: default;
+}
+
+.plates-search-item.loading:hover,
+.plates-search-item.no-results:hover {
+    background: transparent;
+}
+
+.selected-plate-display {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: linear-gradient(135deg, var(--success-green) 0%, #1e7e34 100%);
+    border-radius: var(--border-radius);
+    color: var(--white);
+    font-weight: 600;
+    direction: rtl;
+    margin-top: 8px;
+}
+
+#selectedPlateText {
+    flex: 1;
+}
+
+.clear-plate-btn {
+    width: 28px;
+    height: 28px;
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    border-radius: 50%;
+    color: var(--white);
+    font-size: 1.2rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s ease;
+}
+
+.clear-plate-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+/* Additional Photo Sections Container */
+#additionalPhotoSections {
     display: flex;
     flex-direction: column;
     gap: 20px;
     width: 100%;
 }
 
-#photoSectionsContainer.hidden {
+#additionalPhotoSections.hidden {
     display: none !important;
 }
 

@@ -106,20 +106,23 @@
                 </div>
             </div>
 
-            <!-- Corporate Plates Dropdown (hidden by default) -->
+            <!-- Corporate Plates Search (hidden by default) -->
             <div id="corporatePlatesSection" class="corporate-plates-section hidden">
-                <div class="plates-dropdown-group">
-                    <label for="corporatePlates" class="plates-label">اختر اللوحة</label>
-                    <select id="corporatePlates" class="plates-dropdown">
-                        <option value="">جارٍ التحميل...</option>
-                    </select>
+                <div class="plates-search-group">
+                    <label for="platesSearch" class="plates-label">ابحث عن اللوحة</label>
+                    <div class="plates-search-wrapper">
+                        <input type="text" id="platesSearch" class="plates-search-input" placeholder="اكتب للبحث..." autocomplete="off">
+                        <div id="platesSearchResults" class="plates-search-results hidden"></div>
+                    </div>
+                    <div id="selectedPlateDisplay" class="selected-plate-display hidden">
+                        <span id="selectedPlateText"></span>
+                        <button id="clearSelectedPlate" class="clear-plate-btn" type="button">×</button>
+                    </div>
                 </div>
             </div>
 
-            <!-- Photo Sections Container -->
-            <div id="photoSectionsContainer">
-                <!-- Photo Avant (Front) Button -->
-                <div class="photo-section">
+            <!-- Photo Avant (Front) Button - Always visible -->
+            <div class="photo-section">
                 <button id="btnPhotoAvant" class="photo-btn">
                     <span class="btn-icon">
                         <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -142,9 +145,11 @@
                 </div>
             </div>
 
-            <!-- Photo Arriere (Rear) Button -->
-            <div class="photo-section">
-                <button id="btnPhotoArriere" class="photo-btn">
+            <!-- Additional Photo Sections (hidden in corporate mode) -->
+            <div id="additionalPhotoSections">
+                <!-- Photo Arriere (Rear) Button -->
+                <div class="photo-section">
+                    <button id="btnPhotoArriere" class="photo-btn">
                     <span class="btn-icon">
                         <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
@@ -189,8 +194,8 @@
                         </svg>
                     </button>
                 </div>
-            </div>
-            </div><!-- End of photoSectionsContainer -->
+                </div>
+            </div><!-- End of additionalPhotoSections -->
 
             <!-- Wash Options Toggle Buttons -->
             <div class="wash-options-section">
