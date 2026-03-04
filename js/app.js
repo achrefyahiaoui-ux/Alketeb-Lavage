@@ -10,6 +10,7 @@ const WEBHOOK_TRASH = 'https://n8n.srv987649.hstgr.cloud/webhook/Trash';
 const WEBHOOK_CATEGORIES = 'https://n8n.srv987649.hstgr.cloud/webhook/CarCategory';
 const WEBHOOK_LOGIN = 'https://n8n.srv987649.hstgr.cloud/webhook/LogIn';
 const WEBHOOK_PLATES = 'https://n8n.srv987649.hstgr.cloud/webhook/Plates';
+const WEBHOOK_PLATES_CUSTOMERS = 'https://n8n.srv987649.hstgr.cloud/webhook/PlatesCustomers';
 
 // App State
 const state = {
@@ -22,6 +23,7 @@ const state = {
     phoneNumber: '',
     corporatePlates: [], // Plates loaded from webhook
     selectedPlate: null,
+    personalSelectedPlate: null, // Selected plate for personal customers
     // Photo state
     photoAvant: null,
     photoArriere: null,
@@ -79,6 +81,13 @@ const elements = {
     selectedPlateText: document.getElementById('selectedPlateText'),
     clearSelectedPlate: document.getElementById('clearSelectedPlate'),
     additionalPhotoSections: document.getElementById('additionalPhotoSections'),
+    // Personal customer plates search elements
+    personalPlatesSection: document.getElementById('personalPlatesSection'),
+    personalPlatesSearch: document.getElementById('personalPlatesSearch'),
+    personalPlatesSearchResults: document.getElementById('personalPlatesSearchResults'),
+    personalSelectedPlateDisplay: document.getElementById('personalSelectedPlateDisplay'),
+    personalSelectedPlateText: document.getElementById('personalSelectedPlateText'),
+    clearPersonalSelectedPlate: document.getElementById('clearPersonalSelectedPlate'),
 
     // Photo Buttons
     btnPhotoAvant: document.getElementById('btnPhotoAvant'),
@@ -175,10 +184,21 @@ function init() {
         }
     });
     elements.clearSelectedPlate.addEventListener('click', clearPlateSelection);
+    // Personal plates search event listeners
+    elements.personalPlatesSearch.addEventListener('input', handlePersonalPlatesSearch);
+    elements.personalPlatesSearch.addEventListener('focus', () => {
+        if (elements.personalPlatesSearch.value.trim()) {
+            elements.personalPlatesSearchResults.classList.remove('hidden');
+        }
+    });
+    elements.clearPersonalSelectedPlate.addEventListener('click', clearPersonalPlateSelection);
     // Close search results when clicking outside
     document.addEventListener('click', (e) => {
         if (!elements.platesSearch.contains(e.target) && !elements.platesSearchResults.contains(e.target)) {
             elements.platesSearchResults.classList.add('hidden');
+        }
+        if (!elements.personalPlatesSearch.contains(e.target) && !elements.personalPlatesSearchResults.contains(e.target)) {
+            elements.personalPlatesSearchResults.classList.add('hidden');
         }
     });
 
@@ -387,9 +407,13 @@ function setCustomerType(type) {
         elements.btnCorporate.classList.remove('active');
         // Hide corporate plates search
         elements.corporatePlatesSection.classList.add('hidden');
-        // Show additional photo sections (arriere + matricule)
-        elements.additionalPhotoSections.classList.remove('hidden');
-        // Reset selected plate
+        // Show personal plates search
+        elements.personalPlatesSection.classList.remove('hidden');
+        // Show additional photo sections (arriere + matricule) only if no personal plate selected
+        if (state.personalSelectedPlate === null) {
+            elements.additionalPhotoSections.classList.remove('hidden');
+        }
+        // Reset corporate selected plate
         state.selectedPlate = null;
         clearPlateSelection();
     } else {
@@ -397,8 +421,13 @@ function setCustomerType(type) {
         elements.btnCorporate.classList.add('active');
         // Show corporate plates search
         elements.corporatePlatesSection.classList.remove('hidden');
+        // Hide personal plates search
+        elements.personalPlatesSection.classList.add('hidden');
         // Hide additional photo sections (arriere + matricule)
         elements.additionalPhotoSections.classList.add('hidden');
+        // Reset personal selected plate
+        state.personalSelectedPlate = null;
+        clearPersonalPlateSelection();
         // Focus on search input
         elements.platesSearch.focus();
     }
@@ -555,6 +584,153 @@ function clearPlateSelection() {
 }
 
 /**
+ * Debounce timer for personal plates search
+ */
+let personalSearchTimeout = null;
+
+/**
+ * Handle personal plates search input
+ */
+function handlePersonalPlatesSearch() {
+    const searchTerm = elements.personalPlatesSearch.value.trim();
+
+    // Clear previous timeout
+    if (personalSearchTimeout) {
+        clearTimeout(personalSearchTimeout);
+    }
+
+    // Hide results if empty
+    if (!searchTerm) {
+        elements.personalPlatesSearchResults.classList.add('hidden');
+        elements.personalPlatesSearchResults.innerHTML = '';
+        return;
+    }
+
+    // Show loading
+    elements.personalPlatesSearchResults.innerHTML = '<div class="plates-search-item loading">جارٍ البحث...</div>';
+    elements.personalPlatesSearchResults.classList.remove('hidden');
+
+    // Debounce the search request
+    personalSearchTimeout = setTimeout(() => {
+        searchPersonalPlates(searchTerm);
+    }, 300);
+}
+
+/**
+ * Search personal customer plates from webhook
+ * @param {string} searchTerm - Search query
+ */
+async function searchPersonalPlates(searchTerm) {
+    try {
+        const response = await fetch(WEBHOOK_PLATES_CUSTOMERS, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                action: 'search',
+                query: searchTerm,
+                ...getUserInfo()
+            })
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            const plates = Array.isArray(data) ? data : (data.plates || data.data || []);
+            displayPersonalSearchResults(plates);
+        } else {
+            console.error('Failed to search personal plates:', response.status);
+            elements.personalPlatesSearchResults.innerHTML = '<div class="plates-search-item no-results">خطأ في البحث</div>';
+        }
+    } catch (error) {
+        console.error('Error searching personal plates:', error);
+        elements.personalPlatesSearchResults.innerHTML = '<div class="plates-search-item no-results">خطأ في الاتصال</div>';
+    }
+}
+
+/**
+ * Display personal plates search results
+ * @param {Array} plates - Array of plate objects
+ */
+function displayPersonalSearchResults(plates) {
+    if (!plates || plates.length === 0) {
+        elements.personalPlatesSearchResults.innerHTML = '<div class="plates-search-item no-results">لا توجد نتائج</div>';
+        return;
+    }
+
+    elements.personalPlatesSearchResults.innerHTML = '';
+
+    plates.forEach(plate => {
+        const item = document.createElement('div');
+        item.className = 'plates-search-item';
+
+        // Handle various data formats
+        let plateValue, displayText;
+        if (typeof plate === 'string') {
+            plateValue = plate;
+            displayText = plate;
+        } else {
+            plateValue = plate.Matricule || plate.plate || plate.id || '';
+            const plateName = plate.name || plate.Nom || '';
+            displayText = plateName ? `${plateName} (${plateValue})` : plateValue;
+        }
+
+        item.textContent = displayText;
+        item.dataset.value = plateValue;
+        item.dataset.plate = JSON.stringify(plate);
+
+        item.addEventListener('click', () => selectPersonalPlate(plate));
+
+        elements.personalPlatesSearchResults.appendChild(item);
+    });
+}
+
+/**
+ * Select a plate from personal customer search results
+ * @param {Object|string} plate - Selected plate
+ */
+function selectPersonalPlate(plate) {
+    // Store selected plate
+    if (typeof plate === 'string') {
+        state.personalSelectedPlate = { Matricule: plate };
+    } else {
+        state.personalSelectedPlate = plate;
+    }
+
+    // Get display text
+    const plateValue = state.personalSelectedPlate.Matricule || state.personalSelectedPlate.plate || state.personalSelectedPlate.id || '';
+    const plateName = state.personalSelectedPlate.name || state.personalSelectedPlate.Nom || '';
+    const displayText = plateName ? `${plateName} (${plateValue})` : plateValue;
+
+    // Update UI
+    elements.personalSelectedPlateText.textContent = displayText;
+    elements.personalSelectedPlateDisplay.classList.remove('hidden');
+    elements.personalPlatesSearch.value = '';
+    elements.personalPlatesSearchResults.classList.add('hidden');
+
+    // Hide additional photo sections when plate is selected
+    elements.additionalPhotoSections.classList.add('hidden');
+
+    updateSubmitButton();
+}
+
+/**
+ * Clear personal plate selection
+ */
+function clearPersonalPlateSelection() {
+    state.personalSelectedPlate = null;
+    elements.personalSelectedPlateText.textContent = '';
+    elements.personalSelectedPlateDisplay.classList.add('hidden');
+    elements.personalPlatesSearch.value = '';
+    elements.personalPlatesSearchResults.classList.add('hidden');
+
+    // Show additional photo sections when plate is cleared
+    elements.additionalPhotoSections.classList.remove('hidden');
+
+    updateSubmitButton();
+}
+
+/**
  * Toggle a wash option on/off
  * @param {string} option - 'exterieur', 'interieur', or 'cire'
  */
@@ -703,9 +879,15 @@ function updateSubmitButton() {
     const hasPhotoAvant = state.photoAvant !== null;
 
     if (state.customerType === 'personal') {
-        // Personal: needs all photos + wash option
-        const hasAllPhotos = hasPhotoAvant && state.photoArriere && state.photoMatricule;
-        elements.btnValider.disabled = !(hasAllPhotos && hasWashOption);
+        // Check if personal customer has selected a plate
+        if (state.personalSelectedPlate !== null) {
+            // Personal with plate selected: needs front photo + selected plate + wash option
+            elements.btnValider.disabled = !(hasPhotoAvant && hasWashOption);
+        } else {
+            // Personal without plate: needs all photos + wash option
+            const hasAllPhotos = hasPhotoAvant && state.photoArriere && state.photoMatricule;
+            elements.btnValider.disabled = !(hasAllPhotos && hasWashOption);
+        }
     } else {
         // Corporate: needs front photo + selected plate + wash option
         const hasSelectedPlate = state.selectedPlate !== null;
@@ -757,9 +939,18 @@ async function submitPhotos() {
 
     // Validate based on customer type
     if (state.customerType === 'personal') {
-        if (!state.photoAvant || !state.photoArriere || !state.photoMatricule) {
-            showStatus('الرجاء التقاط جميع الصور', 'error');
-            return;
+        if (state.personalSelectedPlate !== null) {
+            // Personal with plate selected: needs front photo only
+            if (!state.photoAvant) {
+                showStatus('الرجاء التقاط صورة السيارة', 'error');
+                return;
+            }
+        } else {
+            // Personal without plate: needs all photos
+            if (!state.photoAvant || !state.photoArriere || !state.photoMatricule) {
+                showStatus('الرجاء التقاط جميع الصور', 'error');
+                return;
+            }
         }
     } else {
         // Corporate mode: needs front photo + selected plate
@@ -791,10 +982,17 @@ async function submitPhotos() {
         };
 
         if (state.customerType === 'personal') {
-            // Personal customer: include all photos
-            payload.imageAvant = state.photoAvant;
-            payload.imageArriere = state.photoArriere;
-            payload.imageMatricule = state.photoMatricule;
+            if (state.personalSelectedPlate !== null) {
+                // Personal customer with plate selected: include front photo + selected plate data
+                payload.imageAvant = state.photoAvant;
+                payload.personalSelectedPlate = state.personalSelectedPlate;
+                payload.Matricule = state.personalSelectedPlate.Matricule || state.personalSelectedPlate.plate || '';
+            } else {
+                // Personal customer without plate: include all photos
+                payload.imageAvant = state.photoAvant;
+                payload.imageArriere = state.photoArriere;
+                payload.imageMatricule = state.photoMatricule;
+            }
         } else {
             // Corporate customer: include front photo + selected plate data
             payload.imageAvant = state.photoAvant;
@@ -810,14 +1008,15 @@ async function submitPhotos() {
 
         // Handle response based on customer type
         if (result.success) {
-            if (state.customerType === 'corporate') {
-                // Corporate: skip validation step, show success and reset
+            // Skip validation for corporate customers OR personal customers with plate selected
+            if (state.customerType === 'corporate' || state.personalSelectedPlate !== null) {
+                // Skip validation step, show success and reset
                 showStatus('تم الإرسال بنجاح!', 'success');
                 resetApp();
                 // Refresh history
                 fetchHistory();
             } else {
-                // Personal: show validation results
+                // Personal without plate: show validation results
                 if (result.data) {
                     // Check if response is an array with data (success case)
                     if (Array.isArray(result.data) && result.data.length > 0 && result.data[0].Categorie) {
@@ -1545,16 +1744,23 @@ function resetApp() {
     state.customerType = 'personal';
     state.phoneNumber = '';
     state.selectedPlate = null;
+    state.personalSelectedPlate = null;
     elements.btnPersonal.classList.add('active');
     elements.btnCorporate.classList.remove('active');
     elements.phoneNumber.value = '';
     elements.corporatePlatesSection.classList.add('hidden');
+    elements.personalPlatesSection.classList.remove('hidden');
     elements.additionalPhotoSections.classList.remove('hidden');
-    // Reset search UI
+    // Reset corporate search UI
     elements.platesSearch.value = '';
     elements.platesSearchResults.classList.add('hidden');
     elements.selectedPlateDisplay.classList.add('hidden');
     elements.selectedPlateText.textContent = '';
+    // Reset personal search UI
+    elements.personalPlatesSearch.value = '';
+    elements.personalPlatesSearchResults.classList.add('hidden');
+    elements.personalSelectedPlateDisplay.classList.add('hidden');
+    elements.personalSelectedPlateText.textContent = '';
 
     // Clear photos
     state.photoAvant = null;
@@ -1587,16 +1793,23 @@ function restartApp() {
     state.customerType = 'personal';
     state.phoneNumber = '';
     state.selectedPlate = null;
+    state.personalSelectedPlate = null;
     elements.btnPersonal.classList.add('active');
     elements.btnCorporate.classList.remove('active');
     elements.phoneNumber.value = '';
     elements.corporatePlatesSection.classList.add('hidden');
+    elements.personalPlatesSection.classList.remove('hidden');
     elements.additionalPhotoSections.classList.remove('hidden');
-    // Reset search UI
+    // Reset corporate search UI
     elements.platesSearch.value = '';
     elements.platesSearchResults.classList.add('hidden');
     elements.selectedPlateDisplay.classList.add('hidden');
     elements.selectedPlateText.textContent = '';
+    // Reset personal search UI
+    elements.personalPlatesSearch.value = '';
+    elements.personalPlatesSearchResults.classList.add('hidden');
+    elements.personalSelectedPlateDisplay.classList.add('hidden');
+    elements.personalSelectedPlateText.textContent = '';
 
     // Clear photos
     state.photoAvant = null;

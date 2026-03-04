@@ -402,6 +402,16 @@ html, body {
     color: #999;
 }
 
+/* Personal Plates Section */
+.personal-plates-section {
+    width: 100%;
+    margin-bottom: 15px;
+}
+
+.personal-plates-section.hidden {
+    display: none !important;
+}
+
 /* Corporate Plates Section */
 .corporate-plates-section {
     width: 100%;
