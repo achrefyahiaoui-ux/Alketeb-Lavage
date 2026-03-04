@@ -9,6 +9,7 @@ const WEBHOOK_VALIDER = 'https://n8n.srv987649.hstgr.cloud/webhook/Valider';
 const WEBHOOK_TRASH = 'https://n8n.srv987649.hstgr.cloud/webhook/Trash';
 const WEBHOOK_CATEGORIES = 'https://n8n.srv987649.hstgr.cloud/webhook/CarCategory';
 const WEBHOOK_LOGIN = 'https://n8n.srv987649.hstgr.cloud/webhook/LogIn';
+const WEBHOOK_PLATES = 'https://n8n.srv987649.hstgr.cloud/webhook/Plates';
 
 // App State
 const state = {
@@ -16,6 +17,11 @@ const state = {
     isLoggedIn: false,
     currentUser: null,
     users: [],
+    // Customer type state
+    customerType: 'personal', // 'personal' or 'corporate'
+    phoneNumber: '',
+    corporatePlates: [], // Plates loaded from webhook
+    selectedPlate: null,
     // Photo state
     photoAvant: null,
     photoArriere: null,
@@ -61,6 +67,14 @@ const elements = {
     mainContent: document.getElementById('mainContent'),
     currentUserName: document.getElementById('currentUserName'),
     btnLogout: document.getElementById('btnLogout'),
+
+    // Customer type elements
+    btnPersonal: document.getElementById('btnPersonal'),
+    btnCorporate: document.getElementById('btnCorporate'),
+    phoneNumber: document.getElementById('phoneNumber'),
+    corporatePlatesSection: document.getElementById('corporatePlatesSection'),
+    corporatePlates: document.getElementById('corporatePlates'),
+    photoSectionsContainer: document.getElementById('photoSectionsContainer'),
 
     // Photo Buttons
     btnPhotoAvant: document.getElementById('btnPhotoAvant'),
@@ -145,6 +159,12 @@ function init() {
     // Bind login event listeners
     elements.loginForm.addEventListener('submit', handleLogin);
     elements.btnLogout.addEventListener('click', logout);
+
+    // Bind customer type event listeners
+    elements.btnPersonal.addEventListener('click', () => setCustomerType('personal'));
+    elements.btnCorporate.addEventListener('click', () => setCustomerType('corporate'));
+    elements.phoneNumber.addEventListener('input', handlePhoneInput);
+    elements.corporatePlates.addEventListener('change', handlePlateSelection);
 
     // Bind photo button event listeners
     elements.btnPhotoAvant.addEventListener('click', () => openCamera('avant'));
@@ -339,6 +359,122 @@ function logout() {
 }
 
 /**
+ * Set customer type (personal or corporate)
+ * @param {string} type - 'personal' or 'corporate'
+ */
+function setCustomerType(type) {
+    state.customerType = type;
+
+    // Update button states
+    if (type === 'personal') {
+        elements.btnPersonal.classList.add('active');
+        elements.btnCorporate.classList.remove('active');
+        // Hide corporate plates dropdown
+        elements.corporatePlatesSection.classList.add('hidden');
+        // Show photo sections
+        elements.photoSectionsContainer.classList.remove('hidden');
+        // Reset selected plate
+        state.selectedPlate = null;
+    } else {
+        elements.btnPersonal.classList.remove('active');
+        elements.btnCorporate.classList.add('active');
+        // Show corporate plates dropdown
+        elements.corporatePlatesSection.classList.remove('hidden');
+        // Hide photo sections
+        elements.photoSectionsContainer.classList.add('hidden');
+        // Fetch plates if not already loaded
+        if (state.corporatePlates.length === 0) {
+            fetchCorporatePlates();
+        }
+    }
+
+    updateSubmitButton();
+}
+
+/**
+ * Handle phone number input
+ */
+function handlePhoneInput() {
+    state.phoneNumber = elements.phoneNumber.value.trim();
+    updateSubmitButton();
+}
+
+/**
+ * Handle plate selection from dropdown
+ */
+function handlePlateSelection() {
+    const selectedValue = elements.corporatePlates.value;
+    if (selectedValue) {
+        // Find the plate object from state
+        state.selectedPlate = state.corporatePlates.find(p =>
+            (p.Matricule || p.plate || p.id) === selectedValue
+        ) || { Matricule: selectedValue };
+    } else {
+        state.selectedPlate = null;
+    }
+    updateSubmitButton();
+}
+
+/**
+ * Fetch corporate plates from webhook
+ */
+async function fetchCorporatePlates() {
+    // Show loading state in dropdown
+    elements.corporatePlates.innerHTML = '<option value="">جارٍ التحميل...</option>';
+    elements.corporatePlates.disabled = true;
+
+    try {
+        const response = await fetch(WEBHOOK_PLATES, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ action: 'fetch', ...getUserInfo() })
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            state.corporatePlates = Array.isArray(data) ? data : (data.plates || data.data || []);
+            populatePlatesDropdown();
+        } else {
+            console.error('Failed to fetch plates:', response.status);
+            elements.corporatePlates.innerHTML = '<option value="">فشل في تحميل اللوحات</option>';
+        }
+    } catch (error) {
+        console.error('Error fetching plates:', error);
+        elements.corporatePlates.innerHTML = '<option value="">خطأ في الاتصال</option>';
+    } finally {
+        elements.corporatePlates.disabled = false;
+    }
+}
+
+/**
+ * Populate plates dropdown with fetched data
+ */
+function populatePlatesDropdown() {
+    const select = elements.corporatePlates;
+
+    // Clear and add placeholder
+    select.innerHTML = '<option value="">اختر اللوحة...</option>';
+
+    // Add plates
+    state.corporatePlates.forEach(plate => {
+        const option = document.createElement('option');
+        // Handle various data formats
+        if (typeof plate === 'string') {
+            option.value = plate;
+            option.textContent = plate;
+        } else {
+            const plateValue = plate.Matricule || plate.plate || plate.id || '';
+            const plateName = plate.name || plate.Nom || plateValue;
+            option.value = plateValue;
+            option.textContent = plateName + (plateValue !== plateName ? ` (${plateValue})` : '');
+        }
+        select.appendChild(option);
+    });
+}
+
+/**
  * Toggle a wash option on/off
  * @param {string} option - 'exterieur', 'interieur', or 'cire'
  */
@@ -480,12 +616,20 @@ function retakePhoto(type) {
 }
 
 /**
- * Update submit button state based on captured photos and wash options
+ * Update submit button state based on customer type, photos, and wash options
  */
 function updateSubmitButton() {
-    const hasAllPhotos = state.photoAvant && state.photoArriere && state.photoMatricule;
     const hasWashOption = state.washOptions.exterieur || state.washOptions.interieur || state.washOptions.cire;
-    elements.btnValider.disabled = !(hasAllPhotos && hasWashOption);
+
+    if (state.customerType === 'personal') {
+        // Personal: needs all photos + wash option
+        const hasAllPhotos = state.photoAvant && state.photoArriere && state.photoMatricule;
+        elements.btnValider.disabled = !(hasAllPhotos && hasWashOption);
+    } else {
+        // Corporate: needs selected plate + wash option
+        const hasSelectedPlate = state.selectedPlate !== null;
+        elements.btnValider.disabled = !(hasSelectedPlate && hasWashOption);
+    }
 }
 
 /**
@@ -523,17 +667,26 @@ function getUserInfo() {
  * Submit photos to the webhook
  */
 async function submitPhotos() {
-    if (!state.photoAvant || !state.photoArriere || !state.photoMatricule) {
-        showStatus('الرجاء التقاط جميع الصور', 'error');
-        return;
-    }
-
     const washType = getSelectedWashOptions();
 
     if (!washType) {
         showStatus('الرجاء اختيار نوع الغسيل', 'error');
         return;
     }
+
+    // Validate based on customer type
+    if (state.customerType === 'personal') {
+        if (!state.photoAvant || !state.photoArriere || !state.photoMatricule) {
+            showStatus('الرجاء التقاط جميع الصور', 'error');
+            return;
+        }
+    } else {
+        if (!state.selectedPlate) {
+            showStatus('الرجاء اختيار اللوحة', 'error');
+            return;
+        }
+    }
+
     const timestamp = new Date().toISOString();
 
     // Show loading overlay
@@ -541,16 +694,29 @@ async function submitPhotos() {
     showLoading(true);
 
     try {
-        // Send all data to single webhook
-        const result = await sendToWebhook(WEBHOOK_URL, {
+        // Build payload based on customer type
+        const payload = {
             ...getUserInfo(),
-            imageAvant: state.photoAvant,
-            imageArriere: state.photoArriere,
-            imageMatricule: state.photoMatricule,
+            customerType: state.customerType,
+            phoneNumber: state.phoneNumber,
             washType: washType,
             washOptions: state.washOptions,
             timestamp: timestamp
-        });
+        };
+
+        if (state.customerType === 'personal') {
+            // Personal customer: include photos
+            payload.imageAvant = state.photoAvant;
+            payload.imageArriere = state.photoArriere;
+            payload.imageMatricule = state.photoMatricule;
+        } else {
+            // Corporate customer: include selected plate data
+            payload.selectedPlate = state.selectedPlate;
+            payload.Matricule = state.selectedPlate.Matricule || state.selectedPlate.plate || '';
+        }
+
+        // Send all data to single webhook
+        const result = await sendToWebhook(WEBHOOK_URL, payload);
 
         // Hide loading
         showLoading(false);
@@ -1275,6 +1441,19 @@ async function refreshHistory() {
  * Reset app to initial state after successful submission
  */
 function resetApp() {
+    // Reset customer type to personal
+    state.customerType = 'personal';
+    state.phoneNumber = '';
+    state.selectedPlate = null;
+    elements.btnPersonal.classList.add('active');
+    elements.btnCorporate.classList.remove('active');
+    elements.phoneNumber.value = '';
+    elements.corporatePlatesSection.classList.add('hidden');
+    elements.photoSectionsContainer.classList.remove('hidden');
+    if (elements.corporatePlates) {
+        elements.corporatePlates.value = '';
+    }
+
     // Clear photos
     state.photoAvant = null;
     state.photoArriere = null;
@@ -1302,6 +1481,19 @@ function resetApp() {
  * Restart app - clear all data and start fresh
  */
 function restartApp() {
+    // Reset customer type to personal
+    state.customerType = 'personal';
+    state.phoneNumber = '';
+    state.selectedPlate = null;
+    elements.btnPersonal.classList.add('active');
+    elements.btnCorporate.classList.remove('active');
+    elements.phoneNumber.value = '';
+    elements.corporatePlatesSection.classList.add('hidden');
+    elements.photoSectionsContainer.classList.remove('hidden');
+    if (elements.corporatePlates) {
+        elements.corporatePlates.value = '';
+    }
+
     // Clear photos
     state.photoAvant = null;
     state.photoArriere = null;

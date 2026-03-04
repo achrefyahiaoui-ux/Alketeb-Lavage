@@ -74,8 +74,52 @@
 
         <!-- Main Content -->
         <main id="mainContent" class="main-content hidden">
-            <!-- Photo Avant (Front) Button -->
-            <div class="photo-section">
+            <!-- Customer Type Section -->
+            <div class="customer-type-section">
+                <div class="customer-type-group">
+                    <button id="btnPersonal" class="customer-type-btn active" data-type="personal">
+                        <span class="customer-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                <circle cx="12" cy="7" r="4"></circle>
+                            </svg>
+                        </span>
+                        <span class="customer-text">شخص</span>
+                    </button>
+                    <button id="btnCorporate" class="customer-type-btn" data-type="corporate">
+                        <span class="customer-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                                <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                            </svg>
+                        </span>
+                        <span class="customer-text">شركة</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Phone Number Input -->
+            <div class="phone-section">
+                <div class="phone-input-group">
+                    <label for="phoneNumber" class="phone-label">رقم الهاتف</label>
+                    <input type="tel" id="phoneNumber" class="phone-input" placeholder="أدخل رقم الهاتف" pattern="[0-9]*" inputmode="numeric">
+                </div>
+            </div>
+
+            <!-- Corporate Plates Dropdown (hidden by default) -->
+            <div id="corporatePlatesSection" class="corporate-plates-section hidden">
+                <div class="plates-dropdown-group">
+                    <label for="corporatePlates" class="plates-label">اختر اللوحة</label>
+                    <select id="corporatePlates" class="plates-dropdown">
+                        <option value="">جارٍ التحميل...</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Photo Sections Container -->
+            <div id="photoSectionsContainer">
+                <!-- Photo Avant (Front) Button -->
+                <div class="photo-section">
                 <button id="btnPhotoAvant" class="photo-btn">
                     <span class="btn-icon">
                         <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -146,6 +190,7 @@
                     </button>
                 </div>
             </div>
+            </div><!-- End of photoSectionsContainer -->
 
             <!-- Wash Options Toggle Buttons -->
             <div class="wash-options-section">
